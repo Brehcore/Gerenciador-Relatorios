@@ -50,7 +50,7 @@
           >
             <span class="toggle-icon">{{ showUsersDropdown ? '▼' : '▶' }}</span>
             <span class="toggle-text">{{ showUsersDropdown ? 'Ocultar' : 'Listar' }} Usuários</span>
-            <span class="user-count">{{users.length}}</span>
+            <span class="user-count">{{users.length}} (Página {{ currentPage + 1 }}/{{ usersTotalPages }})</span>
           </button>
         </div>
 
@@ -105,6 +105,56 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- Paginação de Usuários -->
+            <div *ngIf="!loadingUsers && usersTotalPages > 1" class="pagination-wrapper">
+              <div class="pagination-info">
+                <span>Página {{ currentPage + 1 }} de {{ usersTotalPages }} (Total: {{ usersTotalElements }} usuários)</span>
+                <span class="page-size-selector">
+                  Itens por página:
+                  <select [(ngModel)]="pageSize" (change)="onPageSizeChange()" class="page-size-select" aria-label="Selecionar quantidade de itens por página">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                  </select>
+                </span>
+              </div>
+              <div class="pagination-controls">
+                <button 
+                  type="button"
+                  class="btn-pagination"
+                  (click)="previousUsersPage()"
+                  [disabled]="currentPage === 0"
+                  title="Página anterior"
+                >
+                  ← Anterior
+                </button>
+                <div class="pagination-numbers">
+                  <button 
+                    *ngFor="let page of getPageNumbers()"
+                    type="button"
+                    class="btn-page-number"
+                    [class.active]="page === currentPage"
+                    [class.ellipsis]="page === -1"
+                    [disabled]="page === -1"
+                    (click)="goToUsersPage(page)"
+                    title="Ir para página {{ page + 1 }}"
+                  >
+                    {{ page === -1 ? '...' : page + 1 }}
+                  </button>
+                </div>
+                <button 
+                  type="button"
+                  class="btn-pagination"
+                  (click)="nextUsersPage()"
+                  [disabled]="currentPage === totalPages - 1"
+                  title="Próxima página"
+                >
+                  Próxima →
+                </button>
+              </div>
             </div>
           </div>
         </div>

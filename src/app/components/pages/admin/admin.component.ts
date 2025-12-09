@@ -47,9 +47,13 @@ export class AdminComponent implements OnInit {
 
   // Paginação
   currentPage = 0;
-  pageSize = 10;
+  pageSize = 5;
   totalElements = 0;
   totalPages = 0;
+  
+  // Paginação de usuários (separada)
+  usersTotalElements = 0;
+  usersTotalPages = 0;
 
   // Subject para debounce na busca de CNPJ
   private cnpjSearchSubject = new Subject<{ cnpj: string; field: 'company' | 'unit'; index?: number }>();
@@ -143,19 +147,99 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  async loadUsers() {
+  async loadUsers(page: number = 0) {
     this.loadingUsers = true;
+    this.currentPage = page;
     try {
-      const resp = await fetch(`${this.legacy.apiBaseUrl}/users`, { headers: this.legacy.authHeaders() });
+      const params = new URLSearchParams();
+      params.append('page', String(page));
+      params.append('size', String(this.pageSize));
+      
+      const url = `${this.legacy.apiBaseUrl}/users?${params.toString()}`;
+      const resp = await fetch(url, { headers: this.legacy.authHeaders() });
       if (!resp.ok) throw new Error('Falha ao carregar usuários');
-      const users = await resp.json();
-      this.users = Array.isArray(users) ? users : [];
+      
+      const data = await resp.json();
+      
+      // Backend retorna: { content: [...], page: { size, number, totalElements, totalPages } }
+      if (data && data.content && Array.isArray(data.content) && data.page) {
+        this.users = data.content;
+        this.usersTotalElements = data.page.totalElements || 0;
+        this.usersTotalPages = data.page.totalPages || 0;
+      } 
+      // Fallback para array simples
+      else if (Array.isArray(data)) {
+        this.users = data;
+        this.usersTotalElements = data.length;
+        this.usersTotalPages = 1;
+      } else {
+        this.users = [];
+        this.usersTotalElements = 0;
+        this.usersTotalPages = 0;
+      }
     } catch (e: any) {
       this.ui.showToast(e?.message || 'Erro ao carregar usuários', 'error');
       this.users = [];
+      this.usersTotalElements = 0;
+      this.usersTotalPages = 0;
     } finally {
       this.loadingUsers = false;
     }
+  }
+
+  nextUsersPage() {
+    if (this.currentPage < this.usersTotalPages - 1) {
+      this.loadUsers(this.currentPage + 1);
+    }
+  }
+
+  previousUsersPage() {
+    if (this.currentPage > 0) {
+      this.loadUsers(this.currentPage - 1);
+    }
+  }
+
+  goToUsersPage(page: number) {
+    if (page >= 0 && page < this.usersTotalPages) {
+      this.loadUsers(page);
+    }
+  }
+
+  onPageSizeChange() {
+    this.currentPage = 0;
+    this.loadUsers(0);
+  }
+
+  getPageNumbers(): number[] {
+    if (this.usersTotalPages <= 0) return [];
+    
+    const pages: number[] = [];
+    const maxButtons = 5;
+    
+    if (this.usersTotalPages <= maxButtons) {
+      for (let i = 0; i < this.usersTotalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      const startPage = Math.max(0, this.currentPage - 2);
+      const endPage = Math.min(this.usersTotalPages - 1, this.currentPage + 2);
+      
+      if (startPage > 0) {
+        pages.push(0);
+        if (startPage > 1) pages.push(-1);
+      }
+      
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      if (endPage < this.usersTotalPages - 1) {
+        if (endPage < this.usersTotalPages - 2) pages.push(-1);
+        pages.push(this.usersTotalPages - 1);
+      }
+    }
+    
+    return pages;
   }
 
   async loadClients() {

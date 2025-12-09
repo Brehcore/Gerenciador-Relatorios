@@ -293,10 +293,96 @@
 
         <!-- Visualização da foto capturada -->
         <div class="photo-preview" *ngIf="capturedImageBase64">
-          <img [src]="capturedImageBase64" alt="Foto capturada" class="preview-image" />
+          <div *ngIf="!isDrawingMode && !isCroppingMode" class="preview-image-container">
+            <img [src]="capturedImageBase64" alt="Foto capturada" class="preview-image" />
+          </div>
+          
+          <!-- Canvas para recorte -->
+          <div *ngIf="isCroppingMode" class="cropping-container">
+            <p class="crop-instruction">Arraste para selecionar a área desejada</p>
+            <canvas 
+              id="cropCanvas" 
+              class="crop-canvas"
+              (mousedown)="onCropMouseDown($event)"
+              (mousemove)="onCropMouseMove($event)"
+              (mouseup)="onCropMouseUp($event)"
+              (mouseleave)="onCropMouseUp()"
+              (touchstart)="onCropMouseDown($event)"
+              (touchmove)="onCropMouseMove($event)"
+              (touchend)="onCropMouseUp($event)">
+            </canvas>
+          </div>
+          
+          <!-- Canvas para desenho -->
+          <div *ngIf="isDrawingMode" class="drawing-container">
+            <canvas 
+              id="drawingCanvas" 
+              class="drawing-canvas"
+              (mousedown)="onCanvasMouseDown($event)"
+              (mousemove)="onCanvasMouseMove($event)"
+              (mouseup)="onCanvasMouseUp()"
+              (mouseleave)="onCanvasMouseUp()"
+              (touchstart)="onCanvasMouseDown($event)"
+              (touchmove)="onCanvasMouseMove($event)"
+              (touchend)="onCanvasMouseUp()">
+            </canvas>
+            
+            <div class="drawing-tools">
+              <div class="tool-group">
+                <label for="drawingColor">Cor:</label>
+                <input type="color" id="drawingColor" [(ngModel)]="drawingColor" class="color-picker" />
+                
+                <label for="lineWidth">Espessura:</label>
+                <input type="range" id="lineWidth" min="1" max="10" [(ngModel)]="drawingLineWidth" class="line-width-slider" />
+                <span>{{ drawingLineWidth }}px</span>
+              </div>
+              
+              <div class="tool-group">
+                <button 
+                  type="button" 
+                  class="tool-btn" 
+                  [class.active]="drawingTool === 'pen'"
+                  (click)="selectDrawingTool('pen')"
+                  title="Caneta livre">
+                  ✏️ Caneta
+                </button>
+                <button 
+                  type="button" 
+                  class="tool-btn" 
+                  [class.active]="drawingTool === 'circle'"
+                  (click)="selectDrawingTool('circle')"
+                  title="Desenhar círculo">
+                  ⭕ Círculo
+                </button>
+                <button 
+                  type="button" 
+                  class="tool-btn" 
+                  [class.active]="drawingTool === 'rectangle'"
+                  (click)="selectDrawingTool('rectangle')"
+                  title="Desenhar quadrado/retângulo">
+                  ▭ Quadrado
+                </button>
+                <button 
+                  type="button" 
+                  class="tool-btn" 
+                  [class.active]="drawingTool === 'arrow'"
+                  (click)="selectDrawingTool('arrow')"
+                  title="Desenhar seta">
+                  ➜ Seta
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <div class="preview-controls">
-            <button type="button" class="btn-action btn-retake" (click)="capturedImageBase64 = null" title="Recapturar foto">🔄 Recapturar</button>
-            <button type="button" class="btn-action btn-confirm" (click)="confirmCapturedPhoto()" title="Confirmar foto">✓ Confirmar</button>
+            <button *ngIf="!isDrawingMode && !isCroppingMode" type="button" class="btn-action btn-retake" (click)="capturedImageBase64 = null" title="Recapturar foto">🔄 Recapturar</button>
+            <button *ngIf="!isDrawingMode && !isCroppingMode" type="button" class="btn-action btn-crop" (click)="enterCropMode()" title="Recortar foto">✂️ Recortar</button>
+            <button *ngIf="!isDrawingMode && !isCroppingMode" type="button" class="btn-action btn-edit" (click)="enterDrawingMode()" title="Editar e desenhar na foto">✏️ Editar</button>
+            <button *ngIf="isCroppingMode" type="button" class="btn-action btn-save" (click)="saveCrop()" title="Salvar recorte">💾 Salvar</button>
+            <button *ngIf="isCroppingMode" type="button" class="btn-action btn-cancel" (click)="discardCrop()" title="Descartar recorte">✕ Descartar</button>
+            <button *ngIf="isDrawingMode" type="button" class="btn-action btn-save" (click)="saveDrawing()" title="Salvar desenho">💾 Salvar</button>
+            <button *ngIf="isDrawingMode" type="button" class="btn-action btn-cancel" (click)="discardDrawing()" title="Descartar desenho">✕ Descartar</button>
+            <button *ngIf="!isDrawingMode && !isCroppingMode" type="button" class="btn-action btn-confirm" (click)="confirmCapturedPhoto()" title="Confirmar foto">✓ Confirmar</button>
           </div>
         </div>
       </div>

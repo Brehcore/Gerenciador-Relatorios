@@ -406,6 +406,18 @@ fieldset.dados-relatorio legend { padding: 0 8px; margin-left: -8px; font-weight
 .photo-slot input[type="file"] { 
   display: none; 
 }
+
+.photo-slot:hover input[type="file"], 
+.photo-slot.empty:hover input[type="file"] {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  opacity: 0;
+}
 .photo-slot:hover { 
   cursor: pointer; 
   border-color: #bfe038; 
@@ -831,4 +843,186 @@ fieldset.dados-relatorio legend { padding: 0 8px; margin-left: -8px; font-weight
 .btn-submit.btn-disabled:hover {
   background-color: #d1d5db;
   transform: none;
+}
+
+/* Estilos para modo de desenho */
+.preview-image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-height: 60vh;
+}
+
+.drawing-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+
+.drawing-canvas {
+  max-width: 100%;
+  border: 2px solid #e5e5e5;
+  border-radius: 6px;
+  cursor: crosshair;
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.drawing-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e5e5;
+}
+
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tool-group label {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.color-picker {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.line-width-slider {
+  width: 100px;
+  height: 6px;
+}
+
+.tool-btn {
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tool-btn:hover {
+  background: #f3f4f6;
+  border-color: #bfe038;
+}
+
+.tool-btn.active {
+  background: #bfe038;
+  border-color: #a8d92e;
+  color: white;
+  font-weight: 600;
+}
+
+.btn-edit {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-edit:hover {
+  background: #1d4ed8;
+}
+
+.btn-save {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-save:hover {
+  background: #059669;
+}
+
+.btn-cancel {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: #dc2626;
+}
+
+/* Estilos para recorte de foto */
+.cropping-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  align-items: center;
+}
+
+.crop-instruction {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 8px 0;
+  font-weight: 500;
+}
+
+.crop-canvas {
+  max-width: 100%;
+  border: 2px solid #e5e5e5;
+  border-radius: 6px;
+  cursor: crosshair;
+  display: block;
+  margin: 0 auto;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.btn-crop {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-crop:hover {
+  background: #d97706;
 }

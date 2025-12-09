@@ -1,11 +1,12 @@
 import { Component, OnInit, OnDestroy, inject, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { AvailabilityCalendarComponent } from '../../shared/availability-calendar/availability-calendar.component';
 import { LegacyService } from '../../../services/legacy.service';
 import { formatCNPJ } from '../../../utils/formatters';
 import { UiService } from '../../../services/ui.service';
@@ -15,7 +16,6 @@ import { AgendaValidationService } from '../../../services/agenda-validation.ser
 import { TechnicalVisitService } from '../../../services/technical-visit.service';
 import { ShiftAvailabilityService } from '../../../services/shift-availability.service';
 import { SignatureModalComponent } from '../../shared/signature-modal/signature-modal.component';
-import { AvailabilityCalendarComponent } from '../../shared/availability-calendar/availability-calendar.component';
 
 interface ReportRecord {
   id?: string;
@@ -33,7 +33,7 @@ interface ReportRecord {
 @Component({
   standalone: true,
   selector: 'app-report',
-  imports: [CommonModule, FormsModule, MatDatepickerModule, MatInputModule, MatNativeDateModule, MatButtonModule, MatIconModule, SignatureModalComponent, AvailabilityCalendarComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDatepickerModule, MatInputModule, MatNativeDateModule, MatButtonModule, MatIconModule, AvailabilityCalendarComponent, SignatureModalComponent],
   templateUrl: './report.component.html',
   styleUrls: ['./report.component.css']
 })
@@ -46,6 +46,20 @@ export class ReportComponent implements OnInit, OnDestroy {
   private technicalVisit = inject(TechnicalVisitService);
   private shiftAvailability = inject(ShiftAvailabilityService);
   private host = inject(ElementRef);
+
+  // Formulário reativo usado no template
+  private fb = inject(FormBuilder);
+  form: FormGroup = this.fb.group({
+    empresa: [''],
+    dataVisita: [''],
+    horaInicial: [''],
+    horaFinal: [''],
+    nomeColaborador: [''],
+    registro: [''],
+    proximaVisita: [''],
+    turnoProximaVisita: [''],
+    observacoes: ['']
+  });
 
   records: Array<ReportRecord> = [];
   companies: Array<any> = [];
@@ -67,6 +81,26 @@ export class ReportComponent implements OnInit, OnDestroy {
   cameraStream: MediaStream | null = null;
   capturedImageBase64: string | null = null;
   currentRecordIndexForCamera: number | null = null;
+  
+  // Propriedades para desenho na foto
+  isDrawingMode = false;
+  drawingTool: 'circle' | 'rectangle' | 'arrow' | 'pen' | null = null;
+  drawingColor = '#ff0000';
+  drawingLineWidth = 3;
+  isDrawing = false;
+  startX = 0;
+  startY = 0;
+  private canvasContext: CanvasRenderingContext2D | null = null;
+  private originalImageBase64: string | null = null;
+  
+  // Propriedades para recorte de foto
+  isCroppingMode = false;
+  cropStartX = 0;
+  cropStartY = 0;
+  cropEndX = 0;
+  cropEndY = 0;
+  isCropSelecting = false;
+  private cropCanvasContext: CanvasRenderingContext2D | null = null;
 
   // Propriedades para o turno da próxima visita
   selectedNextVisitShift: string = '';
@@ -321,9 +355,12 @@ export class ReportComponent implements OnInit, OnDestroy {
       this.currentRecordIndexForCamera = recordIndex;
       this.cameraActive = true;
       
+      // Obter facing mode do localStorage ou usar padrão (traseira)
+      const facingMode = (localStorage.getItem('cameraFacing') || 'environment') as 'user' | 'environment';
+      
       // Solicitar acesso à câmera
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } // Câmera traseira por padrão em celulares
+        video: { facingMode } // Usa o facing mode salvo ou padrão
       });
       
       this.cameraStream = stream;
@@ -357,6 +394,16 @@ export class ReportComponent implements OnInit, OnDestroy {
 
       context.drawImage(videoElement, 0, 0);
       this.capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+
+      // Pausa o vídeo para focar na pré-visualização e evitar que o feed continue
+      try { videoElement.pause(); } catch (_) {}
+
+      // Garantir que os modos de edição estejam resetados para que os botões apareçam
+      this.isDrawingMode = false;
+      this.isCroppingMode = false;
+      this.isDrawing = false;
+      this.drawingTool = null;
+      this.originalImageBase64 = this.capturedImageBase64;
     } catch (e) {
       this.ui.showToast(`Erro ao capturar foto: ${(e as Error).message}`, 'error');
     }
@@ -444,10 +491,352 @@ export class ReportComponent implements OnInit, OnDestroy {
       this.cameraActive = false;
       this.capturedImageBase64 = null;
       this.currentRecordIndexForCamera = null;
+      this.isDrawingMode = false;
+      this.drawingTool = null;
+      this.originalImageBase64 = null;
+      this.canvasContext = null;
       localStorage.removeItem('cameraFacing');
     } catch (e) {
       console.error('Erro ao fechar modal de câmera:', e);
     }
+  }
+
+  // Ativa modo de desenho
+  enterDrawingMode(): void {
+    this.isDrawingMode = true;
+    this.originalImageBase64 = this.capturedImageBase64;
+    
+    // Aguarda o canvas ser renderizado
+    setTimeout(() => {
+      const canvas = document.getElementById('drawingCanvas') as HTMLCanvasElement;
+      if (canvas) {
+        const img = new Image();
+        img.onload = () => {
+          // Define as dimensões do canvas baseado na imagem
+          // Calcula uma escala apropriada para caber na tela
+          const maxWidth = Math.min(img.width, 800);
+          const maxHeight = Math.min(img.height, window.innerHeight * 0.6);
+          const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+          
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.style.width = (img.width * scale) + 'px';
+          canvas.style.height = (img.height * scale) + 'px';
+          
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            this.canvasContext = ctx;
+          }
+        };
+        img.src = this.capturedImageBase64 || '';
+      }
+    }, 100);
+  }
+
+  // Seleciona ferramenta de desenho
+  selectDrawingTool(tool: 'circle' | 'rectangle' | 'arrow' | 'pen'): void {
+    this.drawingTool = tool;
+  }
+
+  // Inicia desenho no canvas
+  onCanvasMouseDown(e: MouseEvent | TouchEvent): void {
+    if (!this.isDrawingMode || !this.drawingTool) return;
+    
+    const canvas = document.getElementById('drawingCanvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    
+    e.preventDefault();
+    
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e instanceof TouchEvent ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const clientY = e instanceof TouchEvent ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    
+    // Calcula a posição relativa ao canvas, considerando a escala
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    this.startX = (clientX - rect.left) * scaleX;
+    this.startY = (clientY - rect.top) * scaleY;
+    this.isDrawing = true;
+  }
+
+  // Desenha enquanto mouse está pressionado
+  onCanvasMouseMove(e: MouseEvent | TouchEvent): void {
+    if (!this.isDrawing || !this.canvasContext || !this.drawingTool) return;
+    
+    const canvas = document.getElementById('drawingCanvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    
+    e.preventDefault();
+    
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e instanceof TouchEvent ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const clientY = e instanceof TouchEvent ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    
+    // Calcula a posição relativa ao canvas, considerando a escala
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const currentX = (clientX - rect.left) * scaleX;
+    const currentY = (clientY - rect.top) * scaleY;
+
+    // Recarrega a imagem original
+    if (this.originalImageBase64) {
+      const img = new Image();
+      img.onload = () => {
+        this.canvasContext?.drawImage(img, 0, 0);
+        this.drawShape(currentX, currentY);
+      };
+      img.src = this.originalImageBase64;
+    }
+  }
+
+  // Finaliza desenho
+  onCanvasMouseUp(e?: MouseEvent | TouchEvent): void {
+    if (e) {
+      e.preventDefault();
+    }
+    this.isDrawing = false;
+  }
+
+  // Desenha forma (círculo, retângulo, seta, caneta)
+  private drawShape(endX: number, endY: number): void {
+    if (!this.canvasContext) return;
+    
+    const ctx = this.canvasContext;
+    ctx.strokeStyle = this.drawingColor;
+    ctx.fillStyle = this.drawingColor;
+    ctx.lineWidth = this.drawingLineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    switch (this.drawingTool) {
+      case 'circle':
+        const radiusX = Math.abs(endX - this.startX);
+        const radiusY = Math.abs(endY - this.startY);
+        const radius = Math.max(radiusX, radiusY);
+        ctx.beginPath();
+        ctx.arc(this.startX, this.startY, radius, 0, 2 * Math.PI);
+        ctx.stroke();
+        break;
+
+      case 'rectangle':
+        const width = endX - this.startX;
+        const height = endY - this.startY;
+        ctx.strokeRect(this.startX, this.startY, width, height);
+        break;
+
+      case 'arrow':
+        this.drawArrow(this.startX, this.startY, endX, endY);
+        break;
+
+      case 'pen':
+        ctx.beginPath();
+        ctx.moveTo(this.startX, this.startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        break;
+    }
+  }
+
+  // Desenha seta
+  private drawArrow(fromX: number, fromY: number, toX: number, toY: number): void {
+    if (!this.canvasContext) return;
+    
+    const ctx = this.canvasContext;
+    const headlen = 15;
+    const angle = Math.atan2(toY - fromY, toX - fromX);
+
+    // Desenha linha
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+
+    // Desenha ponta da seta
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.stroke();
+  }
+
+  // Salva desenho para a imagem
+  saveDrawing(): void {
+    const canvas = document.getElementById('drawingCanvas') as HTMLCanvasElement;
+    if (canvas) {
+      this.capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+      this.isDrawingMode = false;
+      this.drawingTool = null;
+    }
+  }
+
+  // Descarta desenho
+  discardDrawing(): void {
+    this.capturedImageBase64 = this.originalImageBase64;
+    this.isDrawingMode = false;
+    this.drawingTool = null;
+  }
+
+  // Ativa modo de recorte
+  enterCropMode(): void {
+    this.isCroppingMode = true;
+    this.originalImageBase64 = this.capturedImageBase64;
+    
+    // Aguarda o canvas ser renderizado
+    setTimeout(() => {
+      const canvas = document.getElementById('cropCanvas') as HTMLCanvasElement;
+      if (canvas) {
+        const img = new Image();
+        img.onload = () => {
+          // Define as dimensões do canvas baseado na imagem
+          const maxWidth = Math.min(img.width, 800);
+          const maxHeight = Math.min(img.height, window.innerHeight * 0.6);
+          const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+          
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.style.width = (img.width * scale) + 'px';
+          canvas.style.height = (img.height * scale) + 'px';
+          
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            this.cropCanvasContext = ctx;
+          }
+        };
+        img.src = this.capturedImageBase64 || '';
+      }
+    }, 100);
+  }
+
+  // Inicia seleção de recorte
+  onCropMouseDown(e: MouseEvent | TouchEvent): void {
+    if (!this.isCroppingMode) return;
+    
+    const canvas = document.getElementById('cropCanvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    
+    e.preventDefault();
+    
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e instanceof TouchEvent ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const clientY = e instanceof TouchEvent ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    this.cropStartX = (clientX - rect.left) * scaleX;
+    this.cropStartY = (clientY - rect.top) * scaleY;
+    this.cropEndX = this.cropStartX;
+    this.cropEndY = this.cropStartY;
+    this.isCropSelecting = true;
+  }
+
+  // Desenha seleção de recorte
+  onCropMouseMove(e: MouseEvent | TouchEvent): void {
+    if (!this.isCropSelecting || !this.cropCanvasContext || !this.originalImageBase64) return;
+    
+    const canvas = document.getElementById('cropCanvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    
+    e.preventDefault();
+    
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e instanceof TouchEvent ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const clientY = e instanceof TouchEvent ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    this.cropEndX = (clientX - rect.left) * scaleX;
+    this.cropEndY = (clientY - rect.top) * scaleY;
+
+    // Recarrega a imagem original
+    const img = new Image();
+    img.onload = () => {
+      this.cropCanvasContext?.drawImage(img, 0, 0);
+      this.drawCropSelection();
+    };
+    img.src = this.originalImageBase64;
+  }
+
+  // Finaliza seleção de recorte
+  onCropMouseUp(e?: MouseEvent | TouchEvent): void {
+    if (e) {
+      e.preventDefault();
+    }
+    this.isCropSelecting = false;
+  }
+
+  // Desenha retângulo de seleção de recorte
+  private drawCropSelection(): void {
+    if (!this.cropCanvasContext) return;
+    
+    const ctx = this.cropCanvasContext;
+    const x = Math.min(this.cropStartX, this.cropEndX);
+    const y = Math.min(this.cropStartY, this.cropEndY);
+    const width = Math.abs(this.cropEndX - this.cropStartX);
+    const height = Math.abs(this.cropEndY - this.cropStartY);
+
+    // Desenha overlay escuro fora da área de recorte
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    
+    // Parte superior
+    ctx.fillRect(0, 0, ctx.canvas.width, y);
+    // Parte esquerda
+    ctx.fillRect(0, y, x, height);
+    // Parte direita
+    ctx.fillRect(x + width, y, ctx.canvas.width - (x + width), height);
+    // Parte inferior
+    ctx.fillRect(0, y + height, ctx.canvas.width, ctx.canvas.height - (y + height));
+
+    // Desenha borda da área de recorte
+    ctx.strokeStyle = '#bfe038';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+  }
+
+  // Salva recorte
+  saveCrop(): void {
+    const canvas = document.getElementById('cropCanvas') as HTMLCanvasElement;
+    if (!canvas) return;
+
+    const x = Math.min(this.cropStartX, this.cropEndX);
+    const y = Math.min(this.cropStartY, this.cropEndY);
+    const width = Math.abs(this.cropEndX - this.cropStartX);
+    const height = Math.abs(this.cropEndY - this.cropStartY);
+
+    // Validação mínima de área
+    if (width < 10 || height < 10) {
+      this.ui.showToast('Selecione uma área maior para recortar', 'info', 2000);
+      return;
+    }
+
+    // Cria um novo canvas para o recorte
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = width;
+    cropCanvas.height = height;
+    
+    const cropCtx = cropCanvas.getContext('2d');
+    if (cropCtx) {
+      const img = new Image();
+      img.onload = () => {
+        cropCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+        this.capturedImageBase64 = cropCanvas.toDataURL('image/jpeg', 0.9);
+        this.isCroppingMode = false;
+        this.ui.showToast('Foto recortada com sucesso!', 'success', 2000);
+      };
+      img.src = this.originalImageBase64 || '';
+    }
+  }
+
+  // Descarta recorte
+  discardCrop(): void {
+    this.capturedImageBase64 = this.originalImageBase64;
+    this.isCroppingMode = false;
   }
 
   onSelectFileClick(recordIndex: number): void {

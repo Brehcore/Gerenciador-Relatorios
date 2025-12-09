@@ -208,6 +208,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  table-layout: auto;
 }
 
 .users-table thead {
@@ -288,12 +289,18 @@
 .actions-col {
   text-align: center;
   width: 140px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+  display: table-cell;
+  vertical-align: middle;
   white-space: nowrap;
-  flex-shrink: 0;
+  padding: 16px !important;
+}
+
+.users-table .actions-col {
+  display: table-cell;
+}
+
+.companies-table .actions-col {
+  display: table-cell;
 }
 
 .btn-action {
@@ -307,6 +314,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin: 0 2px;
 }
 
 .btn-icon {
@@ -1208,6 +1216,38 @@ label.btn.disabled {
   font-size: 14px;
   color: #666;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.page-size-select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.page-size-select:hover {
+  border-color: #007bff;
+}
+
+.page-size-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
 }
 
 .pagination-controls {
@@ -1278,6 +1318,19 @@ label.btn.disabled {
   font-weight: 700;
 }
 
+.btn-page-number.ellipsis {
+  border: none;
+  background: transparent;
+  color: #999;
+  cursor: default;
+  font-weight: 400;
+}
+
+.btn-page-number.ellipsis:hover {
+  background: transparent;
+  transform: none;
+}
+
 @media (max-width: 768px) {
   .pagination-controls {
     gap: 4px;
@@ -1295,6 +1348,35 @@ label.btn.disabled {
 
   .pagination-numbers {
     gap: 2px;
+  }
+
+  /* Tabela de empresas em mobile */
+  .companies-table-wrapper {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 8px;
+    padding-right: 8px;
+    overflow-x: auto;
+  }
+
+  .companies-table {
+    min-width: 850px;
+  }
+
+  .companies-table th,
+  .companies-table td {
+    padding: 12px 8px;
+    font-size: 12px;
+  }
+
+  .companies-table .actions-col {
+    width: 120px;
+    gap: 2px;
+  }
+
+  .companies-table .btn-action {
+    padding: 6px;
+    font-size: 16px;
   }
 }
 
@@ -1511,6 +1593,11 @@ label.btn.disabled {
 
 /* Mobile Responsivo */
 @media (max-width: 768px) {
+  .section-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
   .users-intro {
     width: 100%;
   }
@@ -1526,5 +1613,48 @@ label.btn.disabled {
 
   .dropdown-toggle {
     width: 100%;
+  }
+
+  /* Tabela em mobile */
+  .table-wrapper {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 8px;
+    padding-right: 8px;
+    overflow-x: auto;
+  }
+
+  .users-table {
+    min-width: 800px;
+  }
+
+  .users-table th,
+  .users-table td {
+    padding: 12px 8px;
+    font-size: 12px;
+  }
+
+  .user-name {
+    min-width: 120px;
+  }
+
+  .user-email {
+    min-width: 150px;
+    font-size: 11px;
+  }
+
+  .council-info,
+  .phone-info {
+    min-width: 100px;
+  }
+
+  .actions-col {
+    width: 120px;
+    gap: 2px;
+  }
+
+  .btn-action {
+    padding: 6px;
+    font-size: 16px;
   }
 }
