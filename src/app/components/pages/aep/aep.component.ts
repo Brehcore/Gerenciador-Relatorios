@@ -29,6 +29,9 @@ export class AepComponent implements OnInit {
   // usado quando carregamos AEP antes das companies estarem disponíveis
   pendingCompanyToSelect: any = null;
   pendingCnpj: string = ''; // Armazenar CNPJ pendente para fallback
+  filteredCompanies: any[] = [];
+  companySearchTerm: string = '';
+  showCompanySuggestions: boolean = false;
   units: any[] = [];
   sectors: any[] = [];
   loadingCompanies = false;
@@ -225,6 +228,7 @@ export class AepComponent implements OnInit {
       // Usar o método do ReportService em vez de fetch direto
       const data = await this.report.fetchCompanies();
       this.companies = Array.isArray(data) ? data : [];
+      this.filteredCompanies = [...this.companies];
       console.log('[AEP] Empresas carregadas:', this.companies.length);
       
       // se temos uma company pendente (vinha no AEP), tentar preencher agora
@@ -261,6 +265,66 @@ export class AepComponent implements OnInit {
       this.companies = []; 
     }
     finally{ this.loadingCompanies = false; }
+  }
+
+  filterCompanies(): void {
+    const term = this.companySearchTerm.toLowerCase().trim();
+    if (!term) {
+      this.filteredCompanies = [...this.companies];
+    } else {
+      this.filteredCompanies = this.companies.filter((company: any) => {
+        const name = (company.name || company.razaoSocial || company.nomeFantasia || '').toLowerCase();
+        const cnpj = (company.cnpj || '').toLowerCase();
+        return name.includes(term) || cnpj.includes(term);
+      });
+    }
+  }
+
+  onCompanyFocus(): void {
+    this.showCompanySuggestions = true;
+    this.filterCompanies();
+  }
+
+  onCompanyBlur(): void {
+    setTimeout(() => { this.showCompanySuggestions = false; }, 180);
+  }
+
+  onSearchCompany(event: any): void {
+    const input = event.target as HTMLInputElement;
+    this.companySearchTerm = input.value;
+    this.filterCompanies();
+  }
+
+  getCompanyInitials(name: string): string {
+    if (!name) return '';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    if (parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  selectCompanyFromSuggestion(company: any): void {
+    try {
+      const val = company.id || company._id || company.name || '';
+      // atualiza o form control e dispara change
+      try { this.form.get('company')?.setValue(val); } catch (_) {}
+      try { this.onCompanyChange(val); } catch(_) {}
+      // Atualiza o input visível e esconde sugestões
+      try { this.companySearchTerm = company.name || company.razaoSocial || company.nomeFantasia || ''; } catch(_) {}
+      this.filteredCompanies = [];
+    } catch (e) {
+      console.warn('[AEP] Erro ao selecionar empresa via sugestão', e);
+    }
+  }
+
+  // Limpa seleção de empresa e sincroniza estado do input visível
+  clearCompanySelection(): void {
+    try {
+      this.companySearchTerm = '';
+      this.filterCompanies();
+      try { this.form.get('company')?.setValue(''); } catch(_) {}
+      try { this.onCompanyChange(''); } catch(_) {}
+    } catch (e) { /* ignore */ }
   }
 
   async loadPhysiotherapists(){

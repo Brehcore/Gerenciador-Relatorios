@@ -6,11 +6,11 @@ label { scroll-margin: 0; }
 /* Basic styles for checklist page - reuse existing form styles */
 .checklist-page .container { padding-bottom:36px; }
 .aep-header { background: transparent; border: none; border-top: 1px solid #ddd; border-radius: 0; padding: 14px; margin-bottom: 18px; }
-.aep-header .fields { display:flex; flex-wrap:wrap; gap:12px; }
-.aep-header .field-row { display:flex; gap:8px; align-items:center; width:100%; }
-.aep-header .field-label { width:160px; font-weight:600; font-size:0.92rem; }
-.aep-header .field-input { flex: 1; }
-.form-control { padding:6px 8px; border-radius:6px; border:1px solid rgba(230,238,252,0.9); font-size:0.92rem; }
+.aep-header .fields { display: block; }
+.aep-header .field-row { display: grid; grid-template-columns: 200px 1fr; gap: 12px; align-items: center; margin-bottom: 10px; }
+.aep-header .field-label { width: 200px; font-weight: 600; font-size: 0.92rem; }
+.aep-header .field-input { width: 100%; box-sizing: border-box; }
+.form-control { padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(230, 238, 252, 0.9); font-size: 0.92rem; width: 100%; }
 
 /* Styled select to match form-control and show a custom arrow */
 .form-select {
@@ -18,7 +18,7 @@ label { scroll-margin: 0; }
 	-moz-appearance: none;
 	appearance: none;
 	width: 100%;
-	padding: 6px 36px 6px 8px; /* leave space for arrow */
+	padding: 8px 36px 8px 10px; /* leave space for arrow */
 	border-radius: 6px;
 	border: 1px solid rgba(230,238,252,0.9);
 	background-color: #fff;
@@ -43,7 +43,8 @@ select::-ms-expand { display: none; }
 .aep-header .field-input > .form-select {
 	box-sizing: border-box;
 	width: 100%;
-	max-width: 420px; /* largura padrão para inputs e selects */
+	height: 36px;
+	line-height: 1.2;
 }
 
 /* Não alterar a largura do input date — manter comportamento nativo */
@@ -51,15 +52,10 @@ select::-ms-expand { display: none; }
 	max-width: 200px;
 }
 
-.aep-header .date-input {
-	max-width: 200px !important;
+/* Date should appear as a full-width row under CNPJ */
+.aep-header .field-row.date-row {
+  width: 100%;
 }
-/* allow certain rows to take half width (two columns) */
-.aep-header .field-row.half {
-	width: calc(50% - 12px);
-}
-
-/* Input with character counter */
 .input-with-counter {
 	display: flex;
 	align-items: center;
@@ -88,7 +84,7 @@ select::-ms-expand { display: none; }
 
 /* align CNPJ label width with other labels so the input aligns with other fields */
 .aep-header .field-row.half.cnpj-row .field-label {
-	width: 160px;
+	width: 200px;
 }
 /* Date should appear as a full-width row under CNPJ */
 .aep-header .field-row.date-row {
@@ -97,7 +93,7 @@ select::-ms-expand { display: none; }
 
 /* ensure consistent label width for CNPJ on repeated rule */
 .aep-header .field-row.half.cnpj-row .field-label {
-	width: 160px;
+	width: 200px;
 }
 
 /* visual separator between groups */
@@ -143,8 +139,20 @@ select::-ms-expand { display: none; }
 .selected-func { margin: 8px 0; font-weight: 600; }
 
 /* inline controls for company select + actions */
-.inline-controls { display:flex; gap:8px; align-items:center; }
+.inline-controls { display: flex; gap: 8px; align-items: center; width: 100%; }
 .inline-controls .form-select { flex: 1 1 auto; }
+.search-input-wrapper { position: relative; display: flex; align-items: center; width: 100%; overflow: visible; }
+.search-input-wrapper .form-control { width: 100%; padding-right: 40px; box-sizing: border-box; }
+.search-input-wrapper .clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; border-radius: 6px; z-index: 10; }
+.search-input-wrapper .clear-btn:hover { background: #f3f4f6; color: #111827; }
+.company-suggestions { position: absolute; left: 0; top: calc(100% + 6px); width: 100%; z-index: 1300; }
+.company-suggestions ul { list-style: none; margin: 0; padding: 6px 0; max-height: 220px; overflow: auto; border: 1px solid #ddd; border-radius: 6px; background: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); }
+.company-suggestions li { display: flex; gap: 10px; align-items: center; padding: 12px 14px; cursor: pointer; background: #fff; min-height: 48px; box-sizing: border-box; }
+.company-suggestions li + li { border-top: 1px solid #f3f4f6; }
+.company-suggestions li:hover { background: #f8fafb; }
+.company-suggestions .initials { display: inline-block; min-width: 34px; height: 34px; line-height: 34px; text-align: center; border-radius: 6px; background: #eee; font-weight: 700; color: #333; }
+.company-suggestions .name { font-size: 0.95rem; color: #222; margin-left: 6px; }
+.company-suggestions .cnpj { color: #666; font-size: 0.85rem; margin-left: auto; }
 .inline-actions { display:flex; gap:8px; align-items:center; }
 
 /* function-actions block (placed above the signature button) */
@@ -240,3 +248,25 @@ select::-ms-expand { display: none; }
 .confirm-actions .btn-primary { min-width:148px; }
 .confirm-actions .btn-ghost { min-width:180px; }
 .confirm-actions .close-x { margin-left:auto; font-size:1.4rem; line-height:1; padding:4px 8px; }
+
+/* Company suggestions */
+.company-suggestions { position: absolute; left: 0; top: calc(100% + 6px); width: 100%; }
+.company-suggestions ul { list-style: none; margin: 0; padding: 6px 0; max-height: 220px; overflow: auto; border: 1px solid #ddd; border-radius: 6px; background: #fff; z-index: 1200; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+.company-suggestions li { display:flex; gap:10px; align-items:center; padding:12px 14px; cursor:pointer; background: #fff; min-height:48px; box-sizing: border-box; }
+.company-suggestions li + li { border-top: 1px solid #f3f4f6; }
+.company-suggestions li:hover { background:#f8fafb; }
+.company-suggestions .initials { display:inline-block; min-width:34px; height:34px; line-height:34px; text-align:center; border-radius:6px; background:#eee; font-weight:700; color:#333; }
+.company-suggestions .name { font-size:0.95rem; color:#222; margin-left:6px; }
+.company-suggestions .cnpj { color:#666; font-size:0.85rem; margin-left:auto; }
+
+/* Search input clear button */
+.search-input-wrapper { position: relative; display: flex; align-items: center; width: 100%; overflow: visible; }
+.search-input-wrapper .form-control { width: 100%; padding-right: 40px; box-sizing: border-box; }
+.search-input-wrapper .clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: transparent; border: none; width: 28px; height: 28px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#6b7280; border-radius:6px; z-index: 10; }
+.search-input-wrapper .clear-btn:hover { background:#f3f4f6; color:#111827; }
+.search-input-wrapper .clear-icon { font-size: 0.95rem; line-height:1; }
+.company-hidden-select { display: none !important; }
+
+/* Prevent field-input from clipping suggestions */
+.field-input { position: relative; overflow: visible !important; }
+.company-suggestions { z-index: 1300; }

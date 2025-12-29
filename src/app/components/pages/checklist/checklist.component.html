@@ -9,11 +9,23 @@
           <label for="aepCompany" class="field-label">Empresa Cliente:</label>
           <div class="field-input">
             <div class="inline-controls">
-              <select id="aepCompany" class="form-select" [(ngModel)]="company" (change)="onCompanyChange(company)" title="Empresa">
+              <div class="search-input-wrapper">
+                <input type="text" class="form-control" placeholder="🔍 Digitar para buscar..." [(ngModel)]="companySearchTerm" [ngModelOptions]="{standalone: true}" (ngModelChange)="filterCompanies()" (focus)="onCompanyFocus()" (blur)="onCompanyBlur()" title="Digite o nome ou CNPJ da empresa" autocomplete="off" />
+                <button *ngIf="companySearchTerm" type="button" class="clear-btn" (click)="clearCompanySelection()" aria-label="Limpar pesquisa">✕</button>
+                <div class="company-suggestions" *ngIf="filteredCompanies?.length && (companySearchTerm || showCompanySuggestions)">
+                  <ul>
+                    <li *ngFor="let s of filteredCompanies" (click)="selectCompanyFromSuggestion(s)">
+                      <span class="initials">{{ getCompanyInitials(s.name || s.razaoSocial || s.nomeFantasia) }}</span>
+                      <span class="name">{{ s.name }}</span>
+                      <span class="cnpj">{{ s.cnpj ? (' - ' + s.cnpj) : '' }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <select id="aepCompany" class="form-select company-hidden-select" [(ngModel)]="company" (change)="onCompanyChange(company)" title="Empresa">
                 <option value="">{{ loadingCompanies ? 'Carregando...' : 'Selecione...' }}</option>
-                <option *ngFor="let c of companies" [value]="c.id || c.name" [attr.data-cnpj]="c.cnpj">{{ c.name }}</option>
+                <option *ngFor="let c of filteredCompanies" [value]="c.id || c.name" [attr.data-cnpj]="c.cnpj">{{ c.name }}</option>
               </select>
-              <!-- actions moved below the risk table/above signature button -->
             </div>
           </div>
         </div>

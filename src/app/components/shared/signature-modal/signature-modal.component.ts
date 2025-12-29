@@ -16,6 +16,9 @@ import { LegacyService } from '../../../services/legacy.service';
           <div class="header-content">
             <h2 class="modal-title">{{ techOnly ? '✍️ Assinatura do Técnico' : '✍️ Assinaturas' }}</h2>
             <p class="modal-subtitle">{{ techOnly ? 'Colete sua assinatura' : 'Colete as assinaturas do Técnico e Cliente' }}</p>
+            <div class="modal-warning">
+              <p>⚠️ <strong>Importante:</strong> Para retornar ao relatório sem perder os dados preenchidos, use o botão <strong>&times;</strong> ou o botão <strong>Cancelar</strong>. Não use o botão voltar do navegador.</p>
+            </div>
           </div>
           <button type="button" class="close-btn" (click)="cancel()" aria-label="Fechar">&times;</button>
         </div>
@@ -173,6 +176,26 @@ import { LegacyService } from '../../../services/legacy.service';
         font-size: 0.95rem;
         color: #666;
         font-weight: 400;
+      }
+
+      .modal-warning {
+        margin-top: 12px;
+        padding: 12px 14px;
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        color: #856404;
+      }
+
+      .modal-warning p {
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      .modal-warning strong {
+        color: #ff6b35;
+        font-weight: 600;
       }
 
       .close-btn {

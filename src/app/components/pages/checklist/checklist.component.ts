@@ -26,6 +26,9 @@ export class ChecklistComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   companies: any[] = [];
+  filteredCompanies: any[] = [];
+  companySearchTerm: string = '';
+  showCompanySuggestions: boolean = false;
   jobRoles: any[] = [];
   units: any[] = [];
   sectors: any[] = [];
@@ -136,9 +139,71 @@ export class ChecklistComponent implements OnInit {
     try{
       const resp = await this.report.fetchCompanies();
       this.companies = Array.isArray(resp) ? resp : [];
+      this.filteredCompanies = [...this.companies];
       this.cdr.markForCheck();
     }catch(e:any){ this.ui.showToast(e?.message || 'Erro ao carregar empresas', 'error'); this.companies = []; }
     finally{ this.loadingCompanies = false; this.cdr.markForCheck(); }
+  }
+
+  filterCompanies(): void {
+    const term = this.companySearchTerm.toLowerCase().trim();
+    if (!term) {
+      this.filteredCompanies = [...this.companies];
+    } else {
+      this.filteredCompanies = this.companies.filter((company: any) => {
+        const name = (company.name || company.razaoSocial || company.nomeFantasia || '').toLowerCase();
+        const cnpj = (company.cnpj || '').toLowerCase();
+        return name.includes(term) || cnpj.includes(term);
+      });
+    }
+    this.cdr.markForCheck();
+  }
+
+  onCompanyFocus(): void {
+    this.showCompanySuggestions = true;
+    this.filterCompanies();
+  }
+
+  onCompanyBlur(): void {
+    setTimeout(() => { this.showCompanySuggestions = false; this.cdr.markForCheck(); }, 180);
+  }
+
+  onSearchCompany(event: any): void {
+    const input = event.target as HTMLInputElement;
+    this.companySearchTerm = input.value;
+    this.filterCompanies();
+  }
+
+  getCompanyInitials(name: string): string {
+    if (!name) return '';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    if (parts.length === 1) return parts[0].slice(0,2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  selectCompanyFromSuggestion(company: any): void {
+    try {
+      this.company = company.id || company._id || company.name || this.company;
+      try { this.onCompanyChange(this.company); } catch(_) {}
+      // Atualiza o input visível e esconde sugestões
+      try { this.companySearchTerm = company.name || company.razaoSocial || company.nomeFantasia || ''; } catch(_) {}
+      this.filteredCompanies = [];
+      this.cdr.markForCheck();
+    } catch (e) {
+      console.warn('[Checklist] Erro ao selecionar empresa via sugestão', e);
+    }
+  }
+
+  // Limpa seleção de empresa e sincroniza estado do input visível
+  clearCompanySelection(): void {
+    try {
+      this.companySearchTerm = '';
+      this.filterCompanies();
+      this.company = '';
+      try { this.onCompanyChange(this.company); } catch(_) {}
+      this.cdr.markForCheck();
+    } catch (e) { /* ignore */ }
   }
 
   onCompanyChange(companyId: any){

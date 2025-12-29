@@ -63,6 +63,9 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   records: Array<ReportRecord> = [];
   companies: Array<any> = [];
+  filteredCompanies: Array<any> = [];
+  companySearchTerm: string = '';
+  showCompanySuggestions: boolean = false;
 
   // Character limits for record fields
   recordFieldLimits = {
@@ -175,8 +178,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       const companiesData = await this.report.fetchCompanies();
       if (companiesData && Array.isArray(companiesData)) {
         this.companies = companiesData;
-        // Popula o dropdown de empresas
-        this.populateCompanyDropdown();
+        this.filteredCompanies = [...this.companies];
       } else {
         console.warn('[Report] companiesData não é um array válido:', companiesData);
       }
@@ -187,33 +189,65 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   private populateCompanyDropdown(): void {
+    // Método mantido por compatibilidade, mas agora não faz nada
+    // O template cuida de renderizar filteredCompanies via *ngFor
+  }
+
+  filterCompanies(): void {
+    const term = this.companySearchTerm.toLowerCase().trim();
+    if (!term) {
+      this.filteredCompanies = [...this.companies];
+    } else {
+      this.filteredCompanies = this.companies.filter((company: any) => {
+        const name = (company.name || company.razaoSocial || company.nomeFantasia || '').toLowerCase();
+        const cnpj = (company.cnpj || '').toLowerCase();
+        return name.includes(term) || cnpj.includes(term);
+      });
+    }
+  }
+
+  onCompanyFocus(): void {
+    this.showCompanySuggestions = true;
+    // ensure list is populated when focusing
+    this.filterCompanies();
+  }
+
+  onCompanyBlur(): void {
+    // delay hiding to allow click on suggestion
+    setTimeout(() => { this.showCompanySuggestions = false; }, 180);
+  }
+
+  onSearchCompany(event: any): void {
+    const input = event.target as HTMLInputElement;
+    this.companySearchTerm = input.value;
+    this.filterCompanies();
+  }
+
+  // Mostrar iniciais (ex: "ACME LTDA" -> "AL")
+  getCompanyInitials(name: string): string {
+    if (!name) return '';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  // Seleciona empresa a partir da lista de sugestões
+  selectCompanyFromSuggestion(company: any): void {
     try {
       const selectElement = this.host.nativeElement.querySelector('#empresaCliente') as HTMLSelectElement;
-      if (!selectElement || !this.companies.length) {
-        console.warn('[Report] Não foi possível popular dropdown - selectElement ou companies vazio');
-        return;
+      if (selectElement) {
+        const val = company.id || company._id || company.name || '';
+        selectElement.value = val;
+        // Dispara change event para disparar o fluxo existente
+        const evt = new Event('change', { bubbles: true });
+        selectElement.dispatchEvent(evt);
       }
-
-      // Limpa as opções existentes mantendo apenas a primeira (placeholder)
-      while (selectElement.options.length > 1) {
-        selectElement.remove(1);
-      }
-
-      // Adiciona cada empresa como uma opção
-      this.companies.forEach((company: any) => {
-        const option = document.createElement('option');
-        const companyId = company.id || company._id || '';
-        const companyName = company.name || company.razaoSocial || company.nomeFantasia || 'Sem nome';
-        
-        option.value = companyId;
-        option.textContent = companyName;
-        option.setAttribute('data-company', JSON.stringify(company)); // Armazena dados da empresa
-        
-        selectElement.appendChild(option);
-      });
-      
+      // Atualiza o input visível com o nome selecionado e esconde as sugestões
+      try { this.companySearchTerm = company.name || company.razaoSocial || company.nomeFantasia || ''; } catch(_) {}
+      this.filteredCompanies = [];
     } catch (e) {
-      console.warn('Erro ao popular dropdown de empresas', e);
+      console.warn('[Report] Erro ao selecionar empresa via sugestão', e);
     }
   }
 
@@ -1238,6 +1272,20 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Limpa seleção de empresa e sincroniza estado do input visível
+  clearCompanySelection(): void {
+    try {
+      this.companySearchTerm = '';
+      this.filterCompanies();
+      const selectElement = this.host.nativeElement.querySelector('#empresaCliente') as HTMLSelectElement;
+      if (selectElement) {
+        selectElement.value = '';
+        const evt = new Event('change', { bubbles: true });
+        selectElement.dispatchEvent(evt);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   private populateUnidades(company: any): void {
     const unidadeSelect = this.host.nativeElement.querySelector('#empresaUnidade') as HTMLSelectElement;
     if (!unidadeSelect) return;
@@ -1372,6 +1420,32 @@ export class ReportComponent implements OnInit, OnDestroy {
   // Ref para o componente compartilhado de assinatura
   @ViewChild('reportSignatureModal', { static: false }) reportSignatureModalComp: any;
 
+  // Estado para gerenciar handler do botão voltar enquanto modal aberto
+  private modalHistoryPushed = false;
+  private modalPopStateHandler = (ev: PopStateEvent) => {
+    try {
+      // Se o modal de assinatura estiver visível, interceptamos o popstate
+      const sigModal = this.host.nativeElement.querySelector('app-signature-modal') as HTMLElement;
+      const isHidden = sigModal && sigModal.classList && sigModal.classList.contains('hidden-modal');
+      const isOpen = sigModal && !isHidden;
+      if (!isOpen) return; // permitir comportamento normal se modal não estiver aberto
+
+      const message = 'Se você voltar perderá todos os dados preenchidos. Use o botão Cancelar para retornar ao relatório já preenchido. Deseja realmente voltar?';
+      const proceed = window.confirm(message);
+      if (!proceed) {
+        // Usuário cancelou a navegação: empurrar o estado novamente para manter o modal no histórico
+        try { history.pushState({ reportModal: true }, ''); } catch (_) {}
+      } else {
+        // Usuário confirmou que quer voltar -> fechar modal e permitir a navegação
+        try { this.closeSignatureModal(); } catch (_) {}
+        // removemos o handler porque o usuário está saindo
+        try { this.unregisterModalBackHandler(); } catch(_) {}
+      }
+    } catch (e) {
+      console.warn('[Report] Erro ao tratar popstate no modal de assinatura', e);
+    }
+  };
+
   private async openSignatureModalAngular(): Promise<void> {
     try {
       // Garante que pads anteriores foram limpos
@@ -1400,6 +1474,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       } catch (err) {
         console.warn('[Report] Falha ao ajustar classes/estilos do modal', err);
       }
+
+      // Registrar handler para o botão voltar do navegador enquanto o modal estiver aberto
+      try { this.registerModalBackHandler(); } catch(_) {}
 
       // Inicializa pads usando SignatureService
       try {
@@ -1465,6 +1542,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
 
     try { document.documentElement.style.overflow = ''; } catch (_) { try { document.body.style.overflow = ''; } catch(_){} }
+
+    // Remover o handler do botão voltar quando fechar o modal
+    try { this.unregisterModalBackHandler(); } catch(_) {}
 
     // Limpa pads e referências
     try { this.clearAllSignatures(); } catch (_) {}
@@ -1558,6 +1638,45 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Registra um estado no history e adiciona listener para interceptar 'back' do navegador
+  private registerModalBackHandler(): void {
+    try {
+      if (this.modalHistoryPushed) return;
+      // pushState com pequeno delay para maior compatibilidade em alguns browsers
+      try { setTimeout(() => { try { history.pushState({ reportModal: true }, ''); } catch(_) {} }, 50); } catch(_) {}
+      window.addEventListener('popstate', this.modalPopStateHandler);
+      // Fallback: impedir unload acidental (navegação/fechar aba)
+      try { window.addEventListener('beforeunload', this.beforeUnloadHandler); } catch(_) {}
+      this.modalHistoryPushed = true;
+    } catch (e) {
+      console.warn('[Report] Falha ao registrar handler do botão voltar:', e);
+    }
+  }
+
+  // Remove o listener e limpa flag
+  private unregisterModalBackHandler(): void {
+    try {
+      if (!this.modalHistoryPushed) return;
+      window.removeEventListener('popstate', this.modalPopStateHandler);
+      try { window.removeEventListener('beforeunload', this.beforeUnloadHandler); } catch(_) {}
+      this.modalHistoryPushed = false;
+    } catch (e) {
+      console.warn('[Report] Falha ao remover handler do botão voltar:', e);
+    }
+  }
+
+  // Handler beforeunload para prevenir perda de dados como fallback
+  private beforeUnloadHandler = (ev: BeforeUnloadEvent) => {
+    try {
+      // Mostrar diálogo nativo de confirmação - texto customizado é ignorado por alguns browsers
+      const confirmationMessage = 'Se você sair desta página perderá todos os dados preenchidos no relatório.';
+      (ev || window.event).returnValue = confirmationMessage;
+      return confirmationMessage;
+    } catch (e) {
+      return undefined as any;
+    }
+  };
+
   async handleSaveClick(e: Event): Promise<void> {
     e.preventDefault();
     
@@ -1615,6 +1734,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     try {
       if (this.reportSignatureModalComp && typeof this.reportSignatureModalComp.open === 'function') {
         this.reportSignatureModalComp.open();
+        try { this.registerModalBackHandler(); } catch(_) {}
         return;
       }
       // Fallback: antiga implementação que inicializava pads manualmente
@@ -1713,6 +1833,8 @@ export class ReportComponent implements OnInit, OnDestroy {
       // Limpar e fechar modal
       try { if (this.reportSignatureModalComp && typeof this.reportSignatureModalComp.close === 'function') this.reportSignatureModalComp.close(); } catch(_) {}
       try { this.clearAllSignatures(); } catch(_) {}
+      // Garantir que o handler do botão voltar seja removido
+      try { this.unregisterModalBackHandler(); } catch(_) {}
 
       // Limpar rascunho
       localStorage.removeItem(this.DRAFT_KEY);
