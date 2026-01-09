@@ -829,23 +829,39 @@ export class ReportService {
   /**
    * Tenta reenviar rascunhos pendentes para o backend.
    * Remove os que forem enviados com sucesso.
+   * Retorna informações sobre o resultado.
    */
-  async retryPendingDrafts(): Promise<void> {
+  async retryPendingDrafts(): Promise<{ success: number; failed: number }> {
     const pending = await this.getPendingDrafts();
-    if (!pending || pending.length === 0) return;
+    if (!pending || pending.length === 0) return { success: 0, failed: 0 };
+    
+    let success = 0, failed = 0;
     console.log('[ReportService] Tentando reenviar', pending.length, 'rascunhos pendentes');
+    
     for (const item of pending) {
       try {
+        // **IMPORTANTE: Validar que o rascunho tem clientCompanyId antes de tentar reenviar**
+        if (!item.draft || !item.draft.clientCompanyId) {
+          console.warn('[ReportService] Rascunho sem clientCompanyId, removendo:', item.id);
+          await this.removePendingDraft(item.id);
+          failed++;
+          continue;
+        }
+
         // postTechnicalVisit espera o payload original
         await this.postTechnicalVisit(item.draft);
         await this.removePendingDraft(item.id);
         console.log('[ReportService] Rascunho reenviado com sucesso:', item.id);
+        success++;
       } catch (e) {
         console.warn('[ReportService] Falha ao reenviar rascunho:', item.id, e);
+        failed++;
         // continuar para o próximo, não remover
         continue;
       }
     }
+    
+    return { success, failed };
   }
 
   

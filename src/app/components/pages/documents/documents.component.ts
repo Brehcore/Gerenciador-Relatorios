@@ -8,6 +8,7 @@ import { ReportService } from '../../../services/report.service';
 import { DocumentService } from '../../../services/document.service';
 import { ClientService } from '../../../services/client.service';
 import { SafeUrlPipe } from '../../../pipes/safe-url.pipe';
+import localforage from 'localforage';
 
 @Component({
   standalone: true,
@@ -46,14 +47,23 @@ export class DocumentsComponent implements OnInit, OnDestroy {
   // Email State
   emailSendingFor: string = '';  // ID do documento sendo enviado (para mostrar loading)
 
+  // Drafts salvos offline
+  offlineDrafts: any[] = [];
+
   private outsideClickHandler = (ev: Event) => {
     // listener para fechar popup quando clicar fora (não mais necessário com icons inline)
   };
 
   constructor(private el: ElementRef, private router: Router) {}
 
-  ngOnInit(): void {
-    this.loadDocumentsList();
+  async ngOnInit(): Promise<void> {
+    await this.loadDocumentsList();
+    // Carregar e exibir drafts offline após carregar documentos do servidor
+    try {
+      await this.loadOfflineDrafts();
+    } catch (e) {
+      console.warn('[Documents] Erro ao carregar drafts offline:', e);
+    }
   }
 
   ngOnDestroy(): void {
@@ -136,6 +146,36 @@ export class DocumentsComponent implements OnInit, OnDestroy {
     this.documents = [];
     this.totalElements = 0;
     this.totalPages = 0;
+  }
+
+  // Novo: Carregar drafts offline (Passo B)
+  private async loadOfflineDrafts(): Promise<void> {
+    try {
+      const draftsList = (await localforage.getItem('reportDrafts')) as any[] || [];
+      // Transformar drafts em formato compatível com a tabela de documentos
+      this.offlineDrafts = draftsList.map((draft, idx) => ({
+        id: draft.id,
+        isOfflineDraft: true,
+        draftId: draft.id,
+        title: draft.data?.title || `Rascunho #${idx + 1}`,
+        companyName: draft.data?.clientCompanyId || 'Empresa não informada',
+        creationDate: draft.createdAt,
+        status: 'DRAFT',
+        documentType: 'Rascunho Pendente',
+        data: draft.data // Dados completos do formulário
+      }));
+
+      // Mesclar drafts com documentos no início da lista
+      this.documents = [...this.offlineDrafts, ...this.documents];
+      this.totalElements += this.offlineDrafts.length;
+
+      if (this.offlineDrafts.length > 0) {
+        this.ui.showToast(`${this.offlineDrafts.length} rascunho(s) pendente(s) encontrado(s).`, 'info', 3000);
+        console.log('[Documents] Drafts offline carregados:', this.offlineDrafts);
+      }
+    } catch (e) {
+      console.error('[Documents] Erro ao carregar drafts offline:', e);
+    }
   }
 
   private updatePageNumbers(): void {
@@ -229,6 +269,12 @@ export class DocumentsComponent implements OnInit, OnDestroy {
   }
 
   async downloadDocument(d:any) {
+    // Se é um draft offline, não há PDF para baixar
+    if (d.isOfflineDraft) {
+      this.ui.showToast('Rascunho ainda não foi enviado. Edite-o para completar e enviar.', 'info');
+      return;
+    }
+
     try {
       const typeSlug = this.documentTypeToSlug(d.documentType || d.type || '');
       const id = d.id || d.reportId || '';
@@ -260,6 +306,12 @@ export class DocumentsComponent implements OnInit, OnDestroy {
   }
 
   async viewDocument(d:any) {
+    // Se é um draft offline, não há PDF para visualizar
+    if (d.isOfflineDraft) {
+      this.ui.showToast('Rascunho ainda não foi enviado. Edite-o para completar e enviar.', 'info');
+      return;
+    }
+
     try {
       const typeSlug = this.documentTypeToSlug(d.documentType || d.type || '');
       const id = d.id || d.reportId || '';
@@ -316,6 +368,13 @@ export class DocumentsComponent implements OnInit, OnDestroy {
 
   editDocument(d:any) {
     try {
+      // Se é um draft offline, redirecionar com parâmetro de retomada (Passo C)
+      if (d.isOfflineDraft) {
+        console.log('[Documents] Abrindo draft offline:', d.draftId);
+        this.router.navigate(['/report'], { queryParams: { resumeDraft: d.draftId } });
+        return;
+      }
+
       const id = d.id || d.reportId || '';
       if (!id) { this.ui.showToast('Documento não possui ID para edição', 'error'); return; }
       // Check if document is signed (immutable)
@@ -470,4 +529,25 @@ export class DocumentsComponent implements OnInit, OnDestroy {
     const slug = String(type).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     return slug || 'document';
   }
-}
+
+  // Novo: Descartar rascunho offline
+  async discardOfflineDraft(draftId: string): Promise<void> {
+    const proceed = window.confirm('Tem certeza que deseja descartar este rascunho?');
+    if (!proceed) return;
+
+    try {
+      const draftsList = (await localforage.getItem('reportDrafts')) as any[] || [];
+      const filtered = draftsList.filter(d => d.id !== draftId);
+      await localforage.setItem('reportDrafts', filtered);
+
+      // Recarregar lista
+      this.documents = this.documents.filter(d => d.draftId !== draftId);
+      this.offlineDrafts = this.offlineDrafts.filter(d => d.draftId !== draftId);
+      this.totalElements--;
+
+      this.ui.showToast('Rascunho descartado.', 'success', 2000);
+    } catch (e) {
+      console.error('[Documents] Erro ao descartar draft:', e);
+      this.ui.showToast('Erro ao descartar rascunho.', 'error');
+    }
+  }}

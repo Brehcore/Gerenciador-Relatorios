@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, inject, ElementRef, ViewChild } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -16,6 +17,7 @@ import { AgendaValidationService } from '../../../services/agenda-validation.ser
 import { TechnicalVisitService } from '../../../services/technical-visit.service';
 import { ShiftAvailabilityService } from '../../../services/shift-availability.service';
 import { SignatureModalComponent } from '../../shared/signature-modal/signature-modal.component';
+import localforage from 'localforage';
 
 interface ReportRecord {
   id?: string;
@@ -46,6 +48,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   private technicalVisit = inject(TechnicalVisitService);
   private shiftAvailability = inject(ShiftAvailabilityService);
   private host = inject(ElementRef);
+  private router = inject(Router);
 
   // Formulário reativo usado no template
   private fb = inject(FormBuilder);
@@ -126,6 +129,17 @@ export class ReportComponent implements OnInit, OnDestroy {
     // Carrega rascunho salvo do localStorage
     this.loadDraftFromStorage();
     
+    // Verificar se há parâmetro de retomada de draft offline (Passo D)
+    const queryParams = new URLSearchParams(window.location.search);
+    const resumeDraftId = queryParams.get('resumeDraft');
+    if (resumeDraftId) {
+      try {
+        await this.loadOfflineDraft(resumeDraftId);
+      } catch (e) {
+        console.warn('[Report] Erro ao carregar draft offline:', e);
+      }
+    }
+    
     // Carrega a hora atual do fuso horário
     this.loadCurrentTime();
     
@@ -146,10 +160,29 @@ export class ReportComponent implements OnInit, OnDestroy {
     this.wireSignatureModalButtons();
     
     // Tenta reenviar rascunhos pendentes quando carregado
-    try { this.report.retryPendingDrafts().catch(()=>{}); } catch(_) {}
+    try {
+      const result = await this.report.retryPendingDrafts();
+      if (result && (result.success > 0 || result.failed > 0)) {
+        const messages = [];
+        if (result.success > 0) messages.push(`${result.success} rascunho(s) reenviado(s) com sucesso`);
+        if (result.failed > 0) messages.push(`${result.failed} rascunho(s) ainda pendente(s)`);
+        
+        if (messages.length > 0) {
+          const msg = messages.join(', ');
+          console.log('[Report] Resultado de reenviamento de rascunhos:', msg);
+          if (result.success > 0) {
+            this.ui.showToast(`Sucesso! ${msg}`, 'success', 4000);
+          }
+        }
+      }
+    } catch(_) {}
 
     // Registrar listener para reconexão
-    this.onlineListener = () => { try { this.report.retryPendingDrafts().catch(()=>{}); } catch(_) {} };
+    this.onlineListener = () => {
+      try {
+        this.report.retryPendingDrafts().catch(()=>{});
+      } catch(_) {}
+    };
     window.addEventListener('online', this.onlineListener);
 
   }
@@ -251,6 +284,8 @@ export class ReportComponent implements OnInit, OnDestroy {
         // Dispara change event para disparar o fluxo existente
         const evt = new Event('change', { bubbles: true });
         selectElement.dispatchEvent(evt);
+        // **IMPORTANTE: Chamar onCompanyChange() diretamente para garantir que o ID seja armazenado**
+        this.onCompanyChange(evt as any);
       }
       // Atualiza o input visível com o nome selecionado e esconde as sugestões
       try { this.companySearchTerm = company.name || company.razaoSocial || company.nomeFantasia || ''; } catch(_) {}
@@ -439,8 +474,29 @@ export class ReportComponent implements OnInit, OnDestroy {
       const context = canvas.getContext('2d');
       if (!context) return;
 
+      // **IMPORTANTE: Desenhar o vídeo no canvas PRIMEIRO**
       context.drawImage(videoElement, 0, 0);
-      this.capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+
+      // Depois verificar se precisa rotacionar (landscape -> portrait)
+      let finalImageBase64: string;
+      if (canvas.width > canvas.height) {
+        // Imagem está em landscape, girar para portrait
+        const rotatedCanvas = document.createElement('canvas');
+        rotatedCanvas.width = canvas.height;
+        rotatedCanvas.height = canvas.width;
+        const rotatedContext = rotatedCanvas.getContext('2d');
+        if (!rotatedContext) return;
+        
+        rotatedContext.translate(canvas.height, 0);
+        rotatedContext.rotate(Math.PI / 2);
+        rotatedContext.drawImage(canvas, 0, 0);
+        finalImageBase64 = rotatedCanvas.toDataURL('image/jpeg', 0.9);
+      } else {
+        // Já está em portrait, usar normalmente
+        finalImageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+      }
+      
+      this.capturedImageBase64 = finalImageBase64;
 
       // Pausa o vídeo para focar na pré-visualização e evitar que o feed continue
       try { videoElement.pause(); } catch (_) {}
@@ -1214,9 +1270,13 @@ export class ReportComponent implements OnInit, OnDestroy {
 
       if (!selectedCompanyId) {
         // Limpa os campos se nenhuma empresa for selecionada
+        this.selectedClientCompanyId = null;
         this.clearCompanyFields();
         return;
       }
+
+      // **IMPORTANTE: Salvar o ID da empresa em propriedade do componente**
+      this.selectedClientCompanyId = parseInt(selectedCompanyId, 10);
 
       // Primeiro, tente obter os dados diretamente do option (data-company) — garante o objeto exato
       let selectedOption: HTMLOptionElement | null = null;
@@ -1429,6 +1489,8 @@ export class ReportComponent implements OnInit, OnDestroy {
   private signatureOverlays: Record<string, HTMLElement> = {};
   // Geolocalização capturada
   private geolocation: { latitude: number; longitude: number } = { latitude: 0, longitude: 0 };
+  // ID da empresa cliente selecionada
+  private selectedClientCompanyId: number | null = null;
 
   // Ref para o componente compartilhado de assinatura
   @ViewChild('reportSignatureModal', { static: false }) reportSignatureModalComp: any;
@@ -1693,6 +1755,16 @@ export class ReportComponent implements OnInit, OnDestroy {
   async handleSaveClick(e: Event): Promise<void> {
     e.preventDefault();
     
+    // **NOVO: Passo A - Verificar conexão ANTES de abrir modal**
+    if (!navigator.onLine) {
+      const message = 'Você está sem conexão. O relatório será salvo como Rascunho para envio posterior.';
+      const proceed = window.confirm(message);
+      if (proceed) {
+        await this.saveDraftOffline();
+      }
+      return;
+    }
+    
     // Verificar se há erro de duplicidade
     if (this.isDuplicityBlocked || this.duplicityError) {
       this.ui.showToast('Não é possível enviar: ' + (this.duplicityError || 'Conflito de agenda detectado'), 'error');
@@ -1758,11 +1830,121 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Novo: Salvar rascunho offline quando sem internet (Passo A)
+  private async saveDraftOffline(): Promise<void> {
+    try {
+      // Coletar todos os dados do formulário
+      const formData = {
+        title: (document.getElementById('reportTitle') as HTMLInputElement)?.value?.trim() || '',
+        visitDate: (document.getElementById('dataInspecao') as HTMLInputElement)?.value || '',
+        startTime: (document.getElementById('reportStartTime') as HTMLInputElement)?.value || '',
+        location: (document.getElementById('localInspecao') as HTMLInputElement)?.value?.trim() || '',
+        summary: (document.getElementById('reportSummary') as HTMLTextAreaElement)?.value?.trim() || '',
+        clientCompanyId: (document.getElementById('empresaCliente') as HTMLSelectElement)?.value?.trim() || '',
+        unitId: (document.getElementById('empresaUnidade') as HTMLSelectElement)?.value?.trim() || '',
+        sectorId: (document.getElementById('empresaSetor') as HTMLSelectElement)?.value?.trim() || '',
+        nextVisitDate: this.selectedNextVisitDate || '',
+        nextVisitShift: this.selectedNextVisitShift || '',
+        records: this.records,
+        companySearchTerm: this.companySearchTerm,
+        geolocation: this.geolocation
+      };
+
+      const draftItem = {
+        id: `draft_${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        status: 'DRAFT',
+        data: formData
+      };
+
+      // Salvar em localforage
+      const draftsList = (await localforage.getItem('reportDrafts')) as any[] || [];
+      draftsList.push(draftItem);
+      await localforage.setItem('reportDrafts', draftsList);
+
+      console.log('[Report] Rascunho salvo offline com ID:', draftItem.id);
+
+      this.ui.showToast('Você está sem conexão. O rascunho foi salvo e será reenviado quando houver internet.', 'warning', 5000);
+      
+      // Redirecionar para documents após curto delay
+      setTimeout(() => {
+        try {
+          this.router.navigate(['/documents']);
+        } catch (e) {
+          console.error('[Report] Erro ao redirecionar para documents:', e);
+          window.location.href = '/documents';
+        }
+      }, 1500);
+    } catch (e) {
+      console.error('[Report] Erro ao salvar rascunho offline:', e);
+      this.ui.showToast('Falha ao salvar rascunho offline.', 'error');
+    }
+  }
+
+  // Novo: Carregar rascunho offline para retomada (Passo D)
+  private async loadOfflineDraft(draftId: string): Promise<void> {
+    try {
+      const draftsList = (await localforage.getItem('reportDrafts')) as any[] || [];
+      const draftItem = draftsList.find(d => d.id === draftId);
+      
+      if (!draftItem) {
+        console.warn('[Report] Draft não encontrado:', draftId);
+        return;
+      }
+
+      const data = draftItem.data;
+      console.log('[Report] Carregando draft offline:', draftId, data);
+
+      // Pequeno delay para garantir que o DOM foi renderizado
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Preencher os campos do formulário
+      const fields: Record<string, string> = {
+        'reportTitle': data.title || '',
+        'dataInspecao': data.visitDate || '',
+        'reportStartTime': data.startTime || '',
+        'localInspecao': data.location || '',
+        'reportSummary': data.summary || '',
+        'empresaCliente': data.clientCompanyId || '',
+        'empresaUnidade': data.unitId || '',
+        'empresaSetor': data.sectorId || ''
+      };
+
+      for (const [id, value] of Object.entries(fields)) {
+        const element = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+        if (element) {
+          element.value = value;
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+
+      // Restaurar dados do componente
+      this.selectedNextVisitDate = data.nextVisitDate || '';
+      this.selectedNextVisitShift = data.nextVisitShift || '';
+      this.records = data.records || [];
+      this.companySearchTerm = data.companySearchTerm || '';
+      // **IMPORTANTE: Restaurar o ID da empresa armazenado para manter consistência**
+      this.selectedClientCompanyId = data.clientCompanyId || null;
+
+      // **IMPORTANTE: Limpar assinatura anterior (Regra de Ouro)**
+      // Quando o formulário é reabrido para edição, a assinatura anterior fica inválida
+      this.clearAllSignatures();
+      this.techPad = null;
+      this.clientPad = null;
+
+      this.ui.showToast('Rascunho carregado. Revise e corrija os dados antes de enviar.', 'info', 3000);
+    } catch (e) {
+      console.error('[Report] Erro ao carregar draft offline:', e);
+      this.ui.showToast('Erro ao carregar rascunho offline.', 'error');
+    }
+  }
+
   // Recebe as assinaturas do componente compartilhado e envia o relatório
   public async onSharedSignaturesConfirmed(data: any): Promise<void> {
     let payload: any = null;
     try {
-      // Validações semelhantes às de handleSendReport
+      // Validações
       if (!this.records || this.records.length === 0) {
         this.ui.showToast('Adicione pelo menos um registro antes de enviar.', 'warning');
         return;
@@ -1777,7 +1959,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       }
 
       // Extrair IDs de unidade e setor - converter para number
-      const clientCompanyIdValue = (document.getElementById('empresaCliente') as HTMLSelectElement)?.value?.trim();
+      // **IMPORTANTE: Usar o ID armazenado na propriedade do componente ao invés do DOM**
       const unitIdValue = (document.getElementById('empresaUnidade') as HTMLSelectElement)?.value?.trim();
       const sectorIdValue = (document.getElementById('empresaSetor') as HTMLSelectElement)?.value?.trim();
 
@@ -1786,7 +1968,7 @@ export class ReportComponent implements OnInit, OnDestroy {
 
       payload = {
         title: (document.getElementById('reportTitle') as HTMLInputElement)?.value?.trim() || '',
-        clientCompanyId: clientCompanyIdValue ? parseInt(clientCompanyIdValue) : null,
+        clientCompanyId: this.selectedClientCompanyId || null,
         unitId: unitIdValue ? parseInt(unitIdValue) : null,
         sectorId: sectorIdValue ? parseInt(sectorIdValue) : null,
         location: (document.getElementById('localInspecao') as HTMLInputElement)?.value?.trim() || '',
@@ -1859,18 +2041,24 @@ export class ReportComponent implements OnInit, OnDestroy {
       const error = e as any;
       const errorMsg = error?.message || 'Erro desconhecido';
       console.error('Erro ao enviar relatório via modal compartilhado:', error);
-      this.ui.showToast(`Falha ao enviar relatório: ${errorMsg}`, 'error');
-      // Salvar rascunho completo para reenvio posterior (inclui imagens de assinatura e fotos)
+      
+      // Se não conseguiu fazer POST (ex: sem internet), salvar rascunho com tudo que tem
+      // Payload pode estar null se erro foi em validações iniciais (records, fotos)
+      // Nesse caso, não salvar rascunho
+      if (!payload) {
+        this.ui.showToast(`Falha ao enviar relatório: ${errorMsg}`, 'error');
+        return;
+      }
+      
+      // Salvar rascunho para reenvio posterior (com assinatura se tiver, sem se não tiver)
       try {
-        // Montar payload final igual ao que foi tentado enviar
-        const pendingPayload = payload || null;
-        if (pendingPayload) {
-          try { await this.report.savePendingDraft(pendingPayload); } catch(_) {}
-          this.saveDraftToStorage();
-          this.ui.showToast('Rascunho salvo localmente. Será reenviado quando houver conexão.', 'info', 6000);
-        }
+        console.log('[Report] Salvando rascunho (offline/reconexão necessária):', payload);
+        await this.report.savePendingDraft(payload);
+        this.saveDraftToStorage();
+        this.ui.showToast('Rascunho salvo. Será reenviado quando houver conexão.', 'info', 6000);
       } catch (saveErr) {
         console.error('[Report] Falha ao salvar rascunho localmente:', saveErr);
+        this.ui.showToast('Erro ao salvar rascunho localmente.', 'error');
       }
     }
   }
@@ -1894,7 +2082,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       }
 
       // Extrair IDs de unidade e setor - converter para number (será enviado como inteiro ao backend)
-      const clientCompanyIdValue = (document.getElementById('empresaCliente') as HTMLSelectElement)?.value?.trim();
+      // **IMPORTANTE: Usar o ID armazenado na propriedade do componente ao invés do DOM**
       const unitIdValue = (document.getElementById('empresaUnidade') as HTMLSelectElement)?.value?.trim();
       const sectorIdValue = (document.getElementById('empresaSetor') as HTMLSelectElement)?.value?.trim();
       
@@ -1912,7 +2100,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       
       payload = {
         title: (document.getElementById('reportTitle') as HTMLInputElement)?.value?.trim() || '',
-        clientCompanyId: clientCompanyIdValue ? parseInt(clientCompanyIdValue) : null,
+        clientCompanyId: this.selectedClientCompanyId || null,
         unitId: unitIdValue ? parseInt(unitIdValue) : null,
         sectorId: sectorIdValue ? parseInt(sectorIdValue) : null,
         location: (document.getElementById('localInspecao') as HTMLInputElement)?.value?.trim() || '',
@@ -2055,16 +2243,21 @@ export class ReportComponent implements OnInit, OnDestroy {
       console.error('Full error object:', error);
       
       this.ui.showToast(`Falha ao enviar relatório: ${errorMsg}`, 'error');
+      
       // Salvar rascunho completo para reenvio posterior (inclui imagens de assinatura e fotos)
-      try {
-        const pendingPayload = payload || null;
-        if (pendingPayload) {
-          try { await this.report.savePendingDraft(pendingPayload); } catch(_) {}
+      if (payload) {
+        try {
+          console.log('[Report] Salvando rascunho com payload:', payload);
+          await this.report.savePendingDraft(payload);
           this.saveDraftToStorage();
           this.ui.showToast('Rascunho salvo localmente. Será reenviado quando houver conexão.', 'info', 6000);
+        } catch (saveErr) {
+          console.error('[Report] Falha ao salvar rascunho localmente:', saveErr);
+          this.ui.showToast('Erro ao salvar rascunho localmente.', 'error');
         }
-      } catch (saveErr) {
-        console.error('[Report] Falha ao salvar rascunho localmente:', saveErr);
+      } else {
+        console.warn('[Report] Payload não está disponível para salvar rascunho');
+        this.ui.showToast('Rascunho não pôde ser salvo - payload indisponível.', 'error');
       }
     }
   }
