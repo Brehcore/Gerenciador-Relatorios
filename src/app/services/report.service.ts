@@ -637,10 +637,11 @@ export class ReportService {
       if (!resp.ok) {
         // Tentar capturar o erro detalhado do backend
         let errorDetails = `Status ${resp.status}: ${resp.statusText}`;
+        let errorBody: any = null;
         try {
           const contentType = resp.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
-            const errorBody = await resp.json();
+            errorBody = await resp.json();
             errorDetails += ` | ${JSON.stringify(errorBody)}`;
           } else {
             const errorText = await resp.text();
@@ -649,7 +650,9 @@ export class ReportService {
         } catch (parseErr) {
           console.warn('[ReportService] Não foi possível fazer parse da resposta de erro', parseErr);
         }
-        throw new Error(errorDetails);
+        // Lança um objeto com dados estruturados para o frontend poder mostrar mensagens
+        const errObj: any = { message: errorDetails, status: resp.status, responseJson: errorBody };
+        throw errObj;
       }
       
       const data = await resp.json();

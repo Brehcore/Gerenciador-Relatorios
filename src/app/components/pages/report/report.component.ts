@@ -66,6 +66,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   filteredCompanies: Array<any> = [];
   companySearchTerm: string = '';
   showCompanySuggestions: boolean = false;
+  selectingCompany: boolean = false; // Flag para prevenir blur durante seleção
 
   // Character limits for record fields
   recordFieldLimits = {
@@ -167,9 +168,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       if (confirmBtn) confirmBtn.addEventListener('click', () => this.handleSendReport());
       if (cancelBtn) cancelBtn.addEventListener('click', () => this.cancelSignatureModal());
 
-      console.log('[Report] Botões do modal de assinatura conectados');
+      // Botões do modal de assinatura conectados
     } catch (e) {
-      console.warn('Erro ao conectar botões do modal', e);
+      // Erro ao conectar botões do modal
     }
   }
 
@@ -179,11 +180,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       if (companiesData && Array.isArray(companiesData)) {
         this.companies = companiesData;
         this.filteredCompanies = [...this.companies];
-      } else {
-        console.warn('[Report] companiesData não é um array válido:', companiesData);
       }
     } catch (e) {
-      console.warn('fetchCompanies failed', e);
+      // Falha ao carregar empresas
       this.ui.showToast('Falha ao carregar, verifique o servidor e tente novamente.', 'error', 4000);
     }
   }
@@ -194,6 +193,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   filterCompanies(): void {
+    console.log('[Report] filterCompanies() chamado - term:', this.companySearchTerm, 'companies:', this.companies.length);
     const term = this.companySearchTerm.toLowerCase().trim();
     if (!term) {
       this.filteredCompanies = [...this.companies];
@@ -204,6 +204,10 @@ export class ReportComponent implements OnInit, OnDestroy {
         return name.includes(term) || cnpj.includes(term);
       });
     }
+    // Se há resultados, mostrar as sugestões mesmo se showCompanySuggestions estava false
+    if (this.filteredCompanies.length > 0) {
+      this.showCompanySuggestions = true;
+    }
   }
 
   onCompanyFocus(): void {
@@ -213,6 +217,10 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   onCompanyBlur(): void {
+    // Não fechar as sugestões se estamos selecionando uma empresa
+    if (this.selectingCompany) {
+      return;
+    }
     // delay hiding to allow click on suggestion
     setTimeout(() => { this.showCompanySuggestions = false; }, 180);
   }
@@ -235,6 +243,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   // Seleciona empresa a partir da lista de sugestões
   selectCompanyFromSuggestion(company: any): void {
     try {
+      this.selectingCompany = true; // Impedir que blur feche as sugestões durante seleção
       const selectElement = this.host.nativeElement.querySelector('#empresaCliente') as HTMLSelectElement;
       if (selectElement) {
         const val = company.id || company._id || company.name || '';
@@ -246,8 +255,12 @@ export class ReportComponent implements OnInit, OnDestroy {
       // Atualiza o input visível com o nome selecionado e esconde as sugestões
       try { this.companySearchTerm = company.name || company.razaoSocial || company.nomeFantasia || ''; } catch(_) {}
       this.filteredCompanies = [];
+      this.showCompanySuggestions = false; // Esconder as sugestões imediatamente
+      // Limpar a flag após 300ms para permitir que blur funcione normalmente depois
+      setTimeout(() => { this.selectingCompany = false; }, 300);
     } catch (e) {
       console.warn('[Report] Erro ao selecionar empresa via sugestão', e);
+      this.selectingCompany = false;
     }
   }
 
@@ -265,7 +278,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       this.records = [];
       this.reportDraft = { records: [] };
     } catch (e) {
-      console.warn('Falha ao limpar rascunho', e);
+      // Falha ao limpar rascunho
     }
   }
 
@@ -283,7 +296,7 @@ export class ReportComponent implements OnInit, OnDestroy {
         reportStartTimeInput.value = timeString;
       }
     } catch (e) {
-      console.warn('Falha ao carregar hora atual', e);
+      // Falha ao carregar hora atual
     }
   }
 
@@ -295,7 +308,7 @@ export class ReportComponent implements OnInit, OnDestroy {
         this.records = this.reportDraft.records || [];
       }
     } catch (e) {
-      console.warn('Falha ao carregar rascunho', e);
+      // Falha ao carregar rascunho
       this.reportDraft = { records: [] };
     }
   }
@@ -305,7 +318,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       this.reportDraft.records = this.records;
       localStorage.setItem(this.DRAFT_KEY, JSON.stringify(this.reportDraft));
     } catch (e) {
-      console.warn('Falha ao salvar rascunho', e);
+      // Falha ao salvar rascunho
     }
   }
 
@@ -967,7 +980,7 @@ export class ReportComponent implements OnInit, OnDestroy {
     // Debounce: só fazer a requisição 800ms após a última mudança
     // Isso evita múltiplas requisições enquanto o usuário está digitando
     this.duplicityCheckTimer = setTimeout(() => {
-      console.log('[Report.onReportFieldChange] Debounce expirado, chamando checkDuplicity...');
+      // Debounce expirado, chamando checkDuplicity...
       this.checkDuplicity();
     }, 800);
   }

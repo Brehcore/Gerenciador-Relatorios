@@ -6,6 +6,9 @@ Títulos: Verde Escuro
 Fundo de todas as páginas: Branco Neve
 */
 
+/* ng-select Styles */
+@import '@ng-select/ng-select/themes/default.theme.css';
+
 :root {
 	--coral:#E65F3C;
 	--coral-claro:#EFA935;

@@ -11,11 +11,11 @@
               <label for="empresaCliente" class="field-label">Empresa Cliente:</label>
               <div class="field-input">
                 <div class="search-input-wrapper">
-                  <input type="text" id="companySearch" class="form-control" placeholder="🔍 Digitar para buscar..." [(ngModel)]="companySearchTerm" (ngModelChange)="filterCompanies()" (focus)="onCompanyFocus()" (blur)="onCompanyBlur()" title="Digite o nome ou CNPJ da empresa" autocomplete="off" />
+                  <input type="text" id="companySearch" class="form-control" placeholder="🔍 Digitar para buscar..." [(ngModel)]="companySearchTerm" [ngModelOptions]="{standalone: true}" (ngModelChange)="filterCompanies()" (focus)="onCompanyFocus()" (blur)="onCompanyBlur()" title="Digite o nome ou CNPJ da empresa" autocomplete="off" />
                   <button *ngIf="companySearchTerm" type="button" class="clear-btn" (click)="clearCompanySelection()" aria-label="Limpar pesquisa">✕</button>
-                  <div class="company-suggestions" *ngIf="filteredCompanies?.length && (companySearchTerm || showCompanySuggestions)">
+                  <div class="company-suggestions" *ngIf="filteredCompanies.length && (companySearchTerm || showCompanySuggestions)">
                     <ul>
-                      <li *ngFor="let s of filteredCompanies" (click)="selectCompanyFromSuggestion(s)">
+                      <li *ngFor="let s of filteredCompanies" (mousedown)="selectCompanyFromSuggestion(s); $event.preventDefault()" (click)="$event.preventDefault()">
                         <span class="initials">{{ getCompanyInitials(s.name || s.razaoSocial || s.nomeFantasia) }}</span>
                         <span class="name">{{ s.name || s.razaoSocial || s.nomeFantasia }}</span>
                         <span class="cnpj">{{ s.cnpj ? (' - ' + s.cnpj) : '' }}</span>

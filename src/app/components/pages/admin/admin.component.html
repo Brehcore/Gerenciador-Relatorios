@@ -257,147 +257,169 @@
           </button>
         </div>
 
-        <!-- Ações: Modelo, Exportar, Importar -->
-        <div class="section-body">
-          <div class="header-actions header-actions-top">
-            <button type="button" class="btn btn-secondary" (click)="downloadTemplate()" title="Baixar modelo vazio para importação">
-              📋 Modelo
-            </button>
-            <button type="button" class="btn btn-secondary" (click)="downloadExport()" [disabled]="isExporting" title="Exportar dados atuais em Excel">
-              {{ isExporting ? '⏳ Exportando...' : '📥 Exportar Dados' }}
-            </button>
-            <label class="btn btn-secondary" [class.disabled]="uploadingFile" [title]="uploadingFile ? 'Importando...' : 'Selecionar planilha para importação'">
-              {{ selectedFile ? '✓ ' + selectedFile.name : '📤 Importar' }}
-              <input 
-                type="file" 
-                id="fileInput"
-                accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                (change)="onFileSelected($event)" 
+        <!-- Lista de Empresas (Dropdown) -->
+        <div class="section-header companies-list-header" *ngIf="companies && companies.length">
+          <button 
+            type="button" 
+            class="dropdown-toggle" 
+            [class.active]="showCompaniesDropdown"
+            (click)="toggleCompaniesDropdown()"
+            title="Expandir/Recolher lista de empresas"
+          >
+            <span class="toggle-icon">{{ showCompaniesDropdown ? '▼' : '▶' }}</span>
+            <span class="toggle-text">{{ showCompaniesDropdown ? 'Ocultar' : 'Listar' }} Empresas</span>
+            <span class="company-count">{{companies.length}}</span>
+          </button>
+        </div>
+
+        <!-- Dropdown Content -->
+        <div class="dropdown-content" *ngIf="showCompaniesDropdown && companies && companies.length">
+          <!-- Ações: Modelo, Exportar, Importar -->
+          <div class="section-body">
+            <div class="header-actions header-actions-top">
+              <button type="button" class="btn btn-secondary" (click)="downloadTemplate()" title="Baixar modelo vazio para importação">
+                📋 Modelo
+              </button>
+              <button type="button" class="btn btn-secondary" (click)="downloadExport()" [disabled]="isExporting" title="Exportar dados atuais em Excel">
+                {{ isExporting ? '⏳ Exportando...' : '📥 Exportar Dados' }}
+              </button>
+              <label class="btn btn-secondary" [class.disabled]="uploadingFile" [title]="uploadingFile ? 'Importando...' : 'Selecionar planilha para importação'">
+                {{ selectedFile ? '✓ ' + selectedFile.name : '📤 Importar' }}
+                <input 
+                  type="file" 
+                  id="fileInput"
+                  accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  (change)="onFileSelected($event)" 
+                  [disabled]="uploadingFile"
+                />
+              </label>
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                *ngIf="selectedFile"
+                (click)="uploadFile()" 
                 [disabled]="uploadingFile"
-              />
-            </label>
-            <button 
-              type="button" 
-              class="btn btn-primary" 
-              *ngIf="selectedFile"
-              (click)="uploadFile()" 
-              [disabled]="uploadingFile"
-              [title]="uploadingFile ? 'Importando...' : 'Confirmar importação'"
-            >
-              {{ uploadingFile ? '⏳ Importando...' : '✓ Confirmar' }}
-            </button>
-            <button 
-              type="button" 
-              class="btn btn-cancel" 
-              *ngIf="selectedFile"
-              (click)="cancelUpload()"
-              [disabled]="uploadingFile"
-              title="Cancelar importação"
-            >
-              ✕ Cancelar
-            </button>
+                [title]="uploadingFile ? 'Importando...' : 'Confirmar importação'"
+              >
+                {{ uploadingFile ? '⏳ Importando...' : '✓ Confirmar' }}
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-cancel" 
+                *ngIf="selectedFile"
+                (click)="cancelUpload()"
+                [disabled]="uploadingFile"
+                title="Cancelar importação"
+              >
+                ✕ Cancelar
+              </button>
+            </div>
+
+            <!-- Mensagem de Importação -->
+            <div *ngIf="importMsg" class="import-message" [class.success]="importMsg.includes('✅')" [class.error]="importMsg.includes('❌')" [class.warning]="importMsg.includes('⚠️')">
+              {{importMsg}}
+            </div>
           </div>
 
-          <!-- Mensagem de Importação -->
-          <div *ngIf="importMsg" class="import-message" [class.success]="importMsg.includes('✅')" [class.error]="importMsg.includes('❌')" [class.warning]="importMsg.includes('⚠️')">
-            {{importMsg}}
+          <!-- Lista de Empresas -->
+          <div class="section-body">
+            <div *ngIf="loadingCompanies" class="loading-state">
+              <div class="spinner"></div>
+              <p>Carregando empresas...</p>
+            </div>
+            <div *ngIf="companies && companies.length" class="companies-table-wrapper">
+              <table class="companies-table">
+                <thead>
+                  <tr>
+                    <th>Empresa</th>
+                    <th>CNPJ</th>
+                    <th>Unidades</th>
+                    <th>Setores</th>
+                    <th class="actions-col">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let c of companies" class="company-row">
+                    <td class="company-name-cell">{{c.name}}</td>
+                    <td class="company-cnpj-cell">{{c.cnpj | cnpjFormat}}</td>
+                    <td class="company-units-cell">📦 {{(c.units || []).length}}</td>
+                    <td class="company-sectors-cell">🏷️ {{(c.sectors || []).length}}</td>
+                    <td class="actions-col">
+                      <button type="button" class="btn-action btn-edit" (click)="openEditCompanyModal(c)" title="Editar">✏️</button>
+                      <button type="button" class="btn-action btn-delete" (click)="deleteCompany(c.id)" title="Excluir">🗑️</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- Paginação -->
+              <div class="pagination-wrapper" *ngIf="totalPages > 1">
+                <div class="pagination-info">
+                  <span>Total: {{totalElements}} empresa(s)</span>
+                </div>
+                <div class="pagination-controls">
+                  <button 
+                    type="button" 
+                    class="btn btn-pagination" 
+                    (click)="onPageChange(0)"
+                    [disabled]="currentPage === 0"
+                    title="Primeira página"
+                  >
+                    ⏮️ Primeira
+                  </button>
+                  <button 
+                    type="button" 
+                    class="btn btn-pagination" 
+                    (click)="onPageChange(currentPage - 1)"
+                    [disabled]="currentPage === 0"
+                    title="Página anterior"
+                  >
+                    ◀️ Anterior
+                  </button>
+                  
+                  <!-- Números de página -->
+                  <div class="pagination-numbers">
+                    <button 
+                      *ngFor="let p of [].constructor(totalPages); let i = index"
+                      type="button" 
+                      class="btn btn-page-number"
+                      [class.active]="i === currentPage"
+                      (click)="onPageChange(i)"
+                      title="Página {{i + 1}}"
+                    >
+                      {{i + 1}}
+                    </button>
+                  </div>
+
+                  <button 
+                    type="button" 
+                    class="btn btn-pagination" 
+                    (click)="onPageChange(currentPage + 1)"
+                    [disabled]="currentPage === totalPages - 1"
+                    title="Próxima página"
+                  >
+                    Próxima ▶️
+                  </button>
+                  <button 
+                    type="button" 
+                    class="btn btn-pagination" 
+                    (click)="onPageChange(totalPages - 1)"
+                    [disabled]="currentPage === totalPages - 1"
+                    title="Última página"
+                  >
+                    Última ⏭️
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Lista de Empresas -->
-        <div class="section-body">
-          <div *ngIf="loadingCompanies" class="loading-state">
-            <div class="spinner"></div>
-            <p>Carregando empresas...</p>
-          </div>
-          <div *ngIf="!loadingCompanies && (!companies || companies.length===0)" class="empty-state">
+        <!-- Empty state when no companies -->
+        <div class="section-body" *ngIf="!loadingCompanies && (!companies || companies.length===0)">
+          <div class="empty-state">
             <div class="empty-icon">📭</div>
             <p>Nenhuma empresa encontrada</p>
-          </div>
-          <div *ngIf="companies && companies.length" class="companies-table-wrapper">
-            <table class="companies-table">
-              <thead>
-                <tr>
-                  <th>Empresa</th>
-                  <th>CNPJ</th>
-                  <th>Unidades</th>
-                  <th>Setores</th>
-                  <th class="actions-col">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let c of companies" class="company-row">
-                  <td class="company-name-cell">{{c.name}}</td>
-                  <td class="company-cnpj-cell">{{c.cnpj | cnpjFormat}}</td>
-                  <td class="company-units-cell">📦 {{(c.units || []).length}}</td>
-                  <td class="company-sectors-cell">🏷️ {{(c.sectors || []).length}}</td>
-                  <td class="actions-col">
-                    <button type="button" class="btn-action btn-edit" (click)="openEditCompanyModal(c)" title="Editar">✏️</button>
-                    <button type="button" class="btn-action btn-delete" (click)="deleteCompany(c.id)" title="Excluir">🗑️</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- Paginação -->
-            <div class="pagination-wrapper" *ngIf="totalPages > 1">
-              <div class="pagination-info">
-                <span>Total: {{totalElements}} empresa(s)</span>
-              </div>
-              <div class="pagination-controls">
-                <button 
-                  type="button" 
-                  class="btn btn-pagination" 
-                  (click)="onPageChange(0)"
-                  [disabled]="currentPage === 0"
-                  title="Primeira página"
-                >
-                  ⏮️ Primeira
-                </button>
-                <button 
-                  type="button" 
-                  class="btn btn-pagination" 
-                  (click)="onPageChange(currentPage - 1)"
-                  [disabled]="currentPage === 0"
-                  title="Página anterior"
-                >
-                  ◀️ Anterior
-                </button>
-                
-                <!-- Números de página -->
-                <div class="pagination-numbers">
-                  <button 
-                    *ngFor="let p of [].constructor(totalPages); let i = index"
-                    type="button" 
-                    class="btn btn-page-number"
-                    [class.active]="i === currentPage"
-                    (click)="onPageChange(i)"
-                    title="Página {{i + 1}}"
-                  >
-                    {{i + 1}}
-                  </button>
-                </div>
-
-                <button 
-                  type="button" 
-                  class="btn btn-pagination" 
-                  (click)="onPageChange(currentPage + 1)"
-                  [disabled]="currentPage === totalPages - 1"
-                  title="Próxima página"
-                >
-                  Próxima ▶️
-                </button>
-                <button 
-                  type="button" 
-                  class="btn btn-pagination" 
-                  (click)="onPageChange(totalPages - 1)"
-                  [disabled]="currentPage === totalPages - 1"
-                  title="Última página"
-                >
-                  Última ⏭️
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -661,18 +683,20 @@
       </div>
       <div class="form-group full-width">
         <label>Empresas</label>
-        <div class="company-checkboxes">
-          <div *ngFor="let company of companies" class="checkbox-item">
-            <label>
-              <input 
-                type="checkbox" 
-                [checked]="(clientForm.get('companyIds')?.value || []).includes(company.id)"
-                (change)="toggleCompanySelection(company.id, true)"
-              />
-              {{company.name}}
-            </label>
-          </div>
-        </div>
+        <ng-select
+          formControlName="companyIds"
+          [items]="allCompaniesForModal"
+          bindLabel="name"
+          bindValue="id"
+          placeholder="Selecionar empresas..."
+          [compareWith]="compareCompanies"
+          [multiple]="true"
+          [searchable]="true"
+          [clearable]="true"
+          [hideSelected]="false"
+          notFoundText="Nenhuma empresa encontrada"
+        >
+        </ng-select>
       </div>
 
       <div class="form-actions">
@@ -707,18 +731,20 @@
       </div>
       <div class="form-group full-width">
         <label>Empresas</label>
-        <div class="company-checkboxes">
-          <div *ngFor="let company of companies" class="checkbox-item">
-            <label>
-              <input 
-                type="checkbox" 
-                [checked]="(editClientForm.get('companyIds')?.value || []).includes(company.id)"
-                (change)="toggleCompanySelection(company.id, false)"
-              />
-              {{company.name}}
-            </label>
-          </div>
-        </div>
+        <ng-select
+          formControlName="companyIds"
+          [items]="allCompaniesForModal"
+          bindLabel="name"
+          bindValue="id"
+          placeholder="Selecionar empresas..."
+          [compareWith]="compareCompanies"
+          [multiple]="true"
+          [searchable]="true"
+          [clearable]="true"
+          [hideSelected]="false"
+          notFoundText="Nenhuma empresa encontrada"
+        >
+        </ng-select>
       </div>
 
       <div class="form-actions">

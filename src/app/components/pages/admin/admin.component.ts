@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { NgSelectModule } from '@ng-select/ng-select';
 import { LegacyService } from '../../../services/legacy.service';
 import { UiService } from '../../../services/ui.service';
 import { CompanyService } from '../../../services/company.service';
@@ -12,7 +13,7 @@ import { debounceTime, Subject } from 'rxjs';
 @Component({
   standalone: true,
   selector: 'app-admin',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, CnpjFormatPipe, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, NgSelectModule, CnpjFormatPipe, RouterModule],
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.css']
 })
@@ -30,6 +31,7 @@ export class AdminComponent implements OnInit {
   loadingClientForm = false;
   users: any[] = [];
   companies: any[] = [];
+  allCompaniesForModal: any[] = [];
   clients: Client[] = [];
 
   // Dropdown de usuários
@@ -44,6 +46,7 @@ export class AdminComponent implements OnInit {
 
   // Modal de nova empresa
   showNewCompanyModal = false;
+  showCompaniesDropdown = false;
 
   // Paginação
   currentPage = 0;
@@ -269,6 +272,13 @@ export class AdminComponent implements OnInit {
     }
   }
 
+  toggleCompaniesDropdown() {
+    this.showCompaniesDropdown = !this.showCompaniesDropdown;
+    if (this.showCompaniesDropdown && this.companies.length === 0 && !this.loadingCompanies) {
+      this.loadCompanies();
+    }
+  }
+
   openNewCompanyModal() {
     this.showNewCompanyModal = true;
     this.companyForm.reset({ companyName: '', companyCnpj: '' });
@@ -289,6 +299,7 @@ export class AdminComponent implements OnInit {
     this.showNewClientModal = true;
     this.clientForm.reset({ name: '', email: '', companyIds: [] });
     this.clientFormMsg = '';
+    this.loadAllCompaniesForModal();
   }
 
   closeNewClientModal() {
@@ -335,6 +346,7 @@ export class AdminComponent implements OnInit {
     });
     this.showEditClientModal = true;
     this.editClientFormMsg = '';
+    this.loadAllCompaniesForModal();
   }
 
   closeEditClientModal() {
@@ -417,6 +429,10 @@ export class AdminComponent implements OnInit {
         control.setValue([...currentValues, companyId]);
       }
     }
+  }
+
+  compareCompanies(c1: any, c2: any): boolean {
+    return c1 && c2 ? c1 === c2 : c1 === c2;
   }
 
   openNewUserModal() {
@@ -606,6 +622,16 @@ export class AdminComponent implements OnInit {
       this.ui.showToast(e?.message || 'Erro ao carregar empresas', 'error');
       this.companies = [];
     } finally { this.loadingCompanies = false; }
+  }
+
+  async loadAllCompaniesForModal() {
+    try {
+      const response = await this.companyService.getAll(0, 999);
+      this.allCompaniesForModal = response.content || [];
+    } catch (e: any) {
+      console.error('Erro ao carregar todas as empresas para modal:', e);
+      this.allCompaniesForModal = [];
+    }
   }
 
   async deleteCompany(id: number) {

@@ -1,4 +1,4 @@
-import { Component, ViewChild, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, ViewChild, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef } from '@angular/core';
 import { formatCNPJ } from '../../../utils/formatters';
 import { CommonModule, NgForOf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -24,11 +24,13 @@ export class ChecklistComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
+  private el = inject(ElementRef);
 
   companies: any[] = [];
   filteredCompanies: any[] = [];
   companySearchTerm: string = '';
   showCompanySuggestions: boolean = false;
+  selectingCompany: boolean = false; // Flag para prevenir blur durante seleção
   jobRoles: any[] = [];
   units: any[] = [];
   sectors: any[] = [];
@@ -156,6 +158,10 @@ export class ChecklistComponent implements OnInit {
         return name.includes(term) || cnpj.includes(term);
       });
     }
+    // Se há resultados, mostrar as sugestões mesmo se showCompanySuggestions estava false
+    if (this.filteredCompanies.length > 0) {
+      this.showCompanySuggestions = true;
+    }
     this.cdr.markForCheck();
   }
 
@@ -165,6 +171,10 @@ export class ChecklistComponent implements OnInit {
   }
 
   onCompanyBlur(): void {
+    // Não fechar as sugestões se estamos selecionando uma empresa
+    if (this.selectingCompany) {
+      return;
+    }
     setTimeout(() => { this.showCompanySuggestions = false; this.cdr.markForCheck(); }, 180);
   }
 
@@ -184,14 +194,18 @@ export class ChecklistComponent implements OnInit {
 
   selectCompanyFromSuggestion(company: any): void {
     try {
-      this.company = company.id || company._id || company.name || this.company;
-      try { this.onCompanyChange(this.company); } catch(_) {}
-      // Atualiza o input visível e esconde sugestões
+      this.selectingCompany = true; // Impedir que blur feche as sugestões durante seleção
+      // Atualiza o input visível com o nome selecionado e esconde as sugestões
       try { this.companySearchTerm = company.name || company.razaoSocial || company.nomeFantasia || ''; } catch(_) {}
       this.filteredCompanies = [];
-      this.cdr.markForCheck();
+      this.showCompanySuggestions = false; // Esconder as sugestões imediatamente
+      this.company = company.id || company._id || company.name || this.company;
+      try { this.onCompanyChange(this.company); } catch(_) {}
+      // Limpar a flag após 300ms para permitir que blur funcione normalmente depois
+      setTimeout(() => { this.selectingCompany = false; }, 300);
     } catch (e) {
       console.warn('[Checklist] Erro ao selecionar empresa via sugestão', e);
+      this.selectingCompany = false;
     }
   }
 
