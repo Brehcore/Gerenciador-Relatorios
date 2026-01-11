@@ -413,7 +413,8 @@ fieldset.dados-relatorio legend { padding: 0 8px; margin-left: -8px; font-weight
 .rec-img { 
   width: 100%; 
   height: 100%; 
-  object-fit: cover; 
+  object-fit: contain;  /* Muda de cover para contain para centralizar */
+  object-position: center;
   display: block; 
 }
 .photo-slot input[type="file"] { 

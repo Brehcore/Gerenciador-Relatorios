@@ -2452,8 +2452,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        // 6.8 cm = 256 pixels (96 DPI padrão PDF)
-        const maxWidth = 256;
+        // 6.3 cm = 220 pixels (96 DPI padrão PDF) - otimizado entre qualidade e tamanho
+        const maxWidth = 220;
         let width = img.width;
         let height = img.height;
 
@@ -2476,9 +2476,9 @@ export class ReportComponent implements OnInit, OnDestroy {
         }
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Converte para base64 com qualidade melhorada (0.90 = 90%)
-        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.90);
-        console.log('[Report] Imagem (base64) redimensionada para', width, 'x', height, 'pixels');
+        // Converte para base64 com qualidade otimizada (0.80 = 80%)
+        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.80);
+        console.log('[Report] Imagem (base64) redimensionada para', width, 'x', height, 'pixels com qualidade 80%');
         resolve(resizedBase64);
       };
       img.onerror = () => {
