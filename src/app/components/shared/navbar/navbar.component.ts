@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LegacyService } from '../../../services/legacy.service';
@@ -91,13 +91,17 @@ import { LegacyService } from '../../../services/legacy.service';
   `,
   styleUrls: ['./navbar.component.css']
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent implements OnInit, OnDestroy {
   name = '--';
   role = '--';
   initials = '--';
   isAdmin = false;
   userMenuOpen = false;
   navOpen = false;
+  
+  private closeHandlerUserMenu: (() => void) | null = null;
+  private closeHandlerNav: (() => void) | null = null;
+  private pendingTimeouts: number[] = [];
 
   constructor(private legacy: LegacyService, private router: Router) {}
 
@@ -116,6 +120,26 @@ export class NavbarComponent implements OnInit {
       this.initials = (this.name || '?').split(/\s+/).slice(0,2).map((p:any)=>p[0]?.toUpperCase()||'').join('');
       this.isAdmin = String(r).toUpperCase() === 'ADMIN';
     }
+  }
+
+  ngOnDestroy(): void {
+    // Limpar todos os timeouts pendentes
+    this.pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+    this.pendingTimeouts = [];
+    
+    // Remover listeners de evento
+    if (this.closeHandlerUserMenu) {
+      document.removeEventListener('click', this.closeHandlerUserMenu);
+      this.closeHandlerUserMenu = null;
+    }
+    if (this.closeHandlerNav) {
+      document.removeEventListener('click', this.closeHandlerNav);
+      this.closeHandlerNav = null;
+    }
+    
+    // Resetar menus
+    this.userMenuOpen = false;
+    this.navOpen = false;
   }
 
   async navigate(key: string, ev?: Event) {
@@ -155,21 +179,55 @@ export class NavbarComponent implements OnInit {
 
   toggleUserMenu(ev?: Event) {
     ev && ev.stopPropagation();
+    
+    // Remover listener anterior se existir
+    if (this.closeHandlerUserMenu) {
+      document.removeEventListener('click', this.closeHandlerUserMenu);
+      this.closeHandlerUserMenu = null;
+    }
+    
     this.userMenuOpen = !this.userMenuOpen;
     if (this.userMenuOpen) {
-      const closeHandler = () => { this.userMenuOpen = false; document.removeEventListener('click', closeHandler); };
+      this.closeHandlerUserMenu = () => { 
+        this.userMenuOpen = false;
+        if (this.closeHandlerUserMenu) {
+          document.removeEventListener('click', this.closeHandlerUserMenu);
+          this.closeHandlerUserMenu = null;
+        }
+      };
       // fecha ao clicar fora
-      setTimeout(()=>document.addEventListener('click', closeHandler), 0);
+      const timeoutId = window.setTimeout(() => {
+        document.addEventListener('click', this.closeHandlerUserMenu!);
+        this.pendingTimeouts = this.pendingTimeouts.filter(t => t !== timeoutId);
+      }, 0);
+      this.pendingTimeouts.push(timeoutId);
     }
   }
 
   toggleNav(ev?: Event) {
     ev && ev.stopPropagation();
+    
+    // Remover listener anterior se existir
+    if (this.closeHandlerNav) {
+      document.removeEventListener('click', this.closeHandlerNav);
+      this.closeHandlerNav = null;
+    }
+    
     this.navOpen = !this.navOpen;
     if (this.navOpen) {
       // fecha menu ao clicar fora (apenas em mobile)
-      const closeHandler = (ev?: Event) => { this.navOpen = false; document.removeEventListener('click', closeHandler); };
-      setTimeout(()=>document.addEventListener('click', closeHandler), 0);
+      this.closeHandlerNav = (ev?: Event) => { 
+        this.navOpen = false;
+        if (this.closeHandlerNav) {
+          document.removeEventListener('click', this.closeHandlerNav);
+          this.closeHandlerNav = null;
+        }
+      };
+      const timeoutId = window.setTimeout(() => {
+        document.addEventListener('click', this.closeHandlerNav!);
+        this.pendingTimeouts = this.pendingTimeouts.filter(t => t !== timeoutId);
+      }, 0);
+      this.pendingTimeouts.push(timeoutId);
     }
   }
 

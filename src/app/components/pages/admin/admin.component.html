@@ -696,6 +696,14 @@
           [hideSelected]="false"
           notFoundText="Nenhuma empresa encontrada"
         >
+          <ng-template ng-label-tmp let-item="item">
+            <span>{{ item.name }}</span>
+            <span *ngIf="item.cnpj" class="badge-cnpj">{{ item.cnpj | cnpjFormat }}</span>
+          </ng-template>
+          <ng-template ng-option-tmp let-item="item">
+            <span>{{ item.name }}</span>
+            <span *ngIf="item.cnpj" class="badge-cnpj">{{ item.cnpj | cnpjFormat }}</span>
+          </ng-template>
         </ng-select>
       </div>
 
@@ -744,6 +752,14 @@
           [hideSelected]="false"
           notFoundText="Nenhuma empresa encontrada"
         >
+          <ng-template ng-label-tmp let-item="item">
+            <span>{{ item.name }}</span>
+            <span *ngIf="item.cnpj" class="badge-cnpj">{{ item.cnpj | cnpjFormat }}</span>
+          </ng-template>
+          <ng-template ng-option-tmp let-item="item">
+            <span>{{ item.name }}</span>
+            <span *ngIf="item.cnpj" class="badge-cnpj">{{ item.cnpj | cnpjFormat }}</span>
+          </ng-template>
         </ng-select>
       </div>
 

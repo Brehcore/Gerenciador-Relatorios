@@ -1,5 +1,6 @@
 import { Component, ViewChild, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef, ElementRef } from '@angular/core';
 import { formatCNPJ } from '../../../utils/formatters';
+import { CnpjFormatPipe } from '../../../pipes/cnpj-format.pipe';
 import { CommonModule, NgForOf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SignatureModalComponent } from '../../shared/signature-modal/signature-modal.component';
@@ -11,7 +12,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 @Component({
   standalone: true,
   selector: 'app-checklist',
-  imports: [CommonModule, FormsModule, NgForOf, SignatureModalComponent],
+  imports: [CommonModule, FormsModule, NgForOf, SignatureModalComponent, CnpjFormatPipe],
   templateUrl: '././checklist.component.html',
   styleUrls: ['./checklist.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush

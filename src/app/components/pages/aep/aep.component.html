@@ -16,7 +16,7 @@
                     <li *ngFor="let s of filteredCompanies" (mousedown)="selectCompanyFromSuggestion(s); $event.preventDefault()" (click)="$event.preventDefault()">
                       <span class="initials">{{ getCompanyInitials(s.name || s.razaoSocial || s.nomeFantasia) }}</span>
                       <span class="name">{{ s.name || s.razaoSocial || s.nomeFantasia }}</span>
-                      <span class="cnpj">{{ s.cnpj ? (' - ' + s.cnpj) : '' }}</span>
+                      <span class="cnpj">{{ s.cnpj ? (' - ' + (s.cnpj | cnpjFormat)) : '' }}</span>
                     </li>
                   </ul>
                 </div>

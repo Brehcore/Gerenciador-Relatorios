@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -8,7 +8,7 @@ import { UiService } from '../../../services/ui.service';
 import { CompanyService } from '../../../services/company.service';
 import { ClientService, Client } from '../../../services/client.service';
 import { CnpjFormatPipe } from '../../../pipes/cnpj-format.pipe';
-import { debounceTime, Subject } from 'rxjs';
+import { debounceTime, Subject, takeUntil } from 'rxjs';
 
 @Component({
   standalone: true,
@@ -17,11 +17,16 @@ import { debounceTime, Subject } from 'rxjs';
   templateUrl: './admin.component.html',
   styleUrls: ['./admin.component.css']
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, OnDestroy {
   private legacy = inject(LegacyService);
   private ui = inject(UiService);
   private companyService = inject(CompanyService);
   private clientService = inject(ClientService);
+  
+  // Subject para desinscrever todas as subscriptions
+  private destroy$ = new Subject<void>();
+  // Array para rastrear timeouts pendentes
+  private pendingTimeouts: number[] = [];
 
   accessDenied = false;
   loadingUsers = false;
@@ -142,12 +147,53 @@ export class AdminComponent implements OnInit {
     this.loadCompanies();
     this.loadClients();
     
-    // Setup debounced CNPJ search
+    // Setup debounced CNPJ search com takeUntil para limpeza automática
     this.cnpjSearchSubject.pipe(
-      debounceTime(800)
+      debounceTime(800),
+      takeUntil(this.destroy$)
     ).subscribe(({ cnpj, field, index }) => {
       this.fetchCnpjData(cnpj, field, index);
     });
+  }
+
+  ngOnDestroy(): void {
+    // Limpar todos os timeouts pendentes
+    this.pendingTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+    this.pendingTimeouts = [];
+    
+    // Emitir o sinal de destruição para todas as subscriptions
+    this.destroy$.next();
+    this.destroy$.complete();
+    
+    // Limpar subjects
+    this.cnpjSearchSubject.complete();
+    
+    // Garantir que overflow do body está resetado
+    try {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    } catch (e) {}
+    
+    // Fechar todos os modais/dropdowns abertos
+    this.showNewUserModal = false;
+    this.showEditUserModal = false;
+    this.showNewClientModal = false;
+    this.showEditClientModal = false;
+    this.showNewCompanyModal = false;
+    this.showEditCompanyModal = false;
+    this.showUsersDropdown = false;
+    this.showClientsDropdown = false;
+    this.showCompaniesDropdown = false;
+  }
+
+  // Helper para criar timeouts que serão limpos automaticamente
+  private setTimeout(callback: () => void, delay: number): void {
+    const timeoutId = window.setTimeout(() => {
+      callback();
+      // Remover do array quando executar
+      this.pendingTimeouts = this.pendingTimeouts.filter(id => id !== timeoutId);
+    }, delay);
+    this.pendingTimeouts.push(timeoutId);
   }
 
   async loadUsers(page: number = 0) {
@@ -327,7 +373,7 @@ export class AdminComponent implements OnInit {
       await this.clientService.create(payload);
       this.clientFormMsg = '✅ Cliente criado com sucesso.';
       this.ui.showToast('Cliente criado com sucesso', 'success');
-      setTimeout(() => this.closeNewClientModal(), 1500);
+      this.setTimeout(() => this.closeNewClientModal(), 1500);
       this.loadClients();
     } catch (e: any) {
       this.clientFormMsg = e?.message || String(e);
@@ -337,16 +383,16 @@ export class AdminComponent implements OnInit {
     }
   }
 
-  openEditClientModal(client: Client) {
+  async openEditClientModal(client: Client) {
     this.editingClientId = client.id || null;
+    this.showEditClientModal = true;
+    this.editClientFormMsg = '';
+    await this.loadAllCompaniesForModal();
     this.editClientForm.patchValue({
       name: client.name,
       email: client.email,
       companyIds: client.companyIds || []
     });
-    this.showEditClientModal = true;
-    this.editClientFormMsg = '';
-    this.loadAllCompaniesForModal();
   }
 
   closeEditClientModal() {
@@ -377,7 +423,7 @@ export class AdminComponent implements OnInit {
       await this.clientService.update(this.editingClientId, payload);
       this.editClientFormMsg = '✅ Cliente atualizado com sucesso.';
       this.ui.showToast('Cliente atualizado com sucesso', 'success');
-      setTimeout(() => this.closeEditClientModal(), 1500);
+      this.setTimeout(() => this.closeEditClientModal(), 1500);
       this.loadClients();
     } catch (e: any) {
       this.editClientFormMsg = e?.message || String(e);
@@ -391,12 +437,34 @@ export class AdminComponent implements OnInit {
     if (!clientId) return;
     const proceed = window.confirm('Deseja realmente excluir este cliente? Esta ação não pode ser desfeita.');
     if (!proceed) return;
+    
+    this.loadingClients = true;
     try {
       await this.clientService.delete(clientId);
       this.ui.showToast('Cliente excluído com sucesso', 'success');
-      this.loadClients();
+      await this.loadClients();
+      this.showClientsDropdown = false;
     } catch (e: any) {
-      this.ui.showToast(e?.message || 'Erro ao excluir cliente', 'error');
+      console.error('[deleteClient] Erro completo:', e);
+      
+      // Extrai a mensagem de erro mais apropriada
+      let errorMsg = e?.message || 'Erro ao excluir cliente';
+      
+      // Se houver detalhes, tenta formatar melhor a mensagem
+      if (e?.details?.message) {
+        errorMsg = e.details.message;
+      } else if (e?.details?.error) {
+        errorMsg = e.details.error;
+      }
+      
+      // Se for erro 409 (Conflict), adiciona emoji
+      if (e?.status === 409) {
+        errorMsg = `⚠️ ${errorMsg}`;
+      }
+      
+      this.ui.showToast(errorMsg, 'error', 5000);
+    } finally {
+      this.loadingClients = false;
     }
   }
 
@@ -432,7 +500,11 @@ export class AdminComponent implements OnInit {
   }
 
   compareCompanies(c1: any, c2: any): boolean {
-    return c1 && c2 ? c1 === c2 : c1 === c2;
+    if (!c1 || !c2) return c1 === c2;
+    // Se c1 é um ID (número/string) e c2 é um objeto (ou vice-versa)
+    const id1 = typeof c1 === 'object' ? c1.id : c1;
+    const id2 = typeof c2 === 'object' ? c2.id : c2;
+    return id1 === id2;
   }
 
   openNewUserModal() {
@@ -550,7 +622,7 @@ export class AdminComponent implements OnInit {
       }
       this.editUserFormMsg = 'Usuário atualizado com sucesso.';
       this.ui.showToast('Usuário atualizado com sucesso', 'success');
-      setTimeout(() => this.closeEditUserModal(), 1500);
+      this.setTimeout(() => this.closeEditUserModal(), 1500);
       this.loadUsers();
     } catch (e: any) {
       this.editUserFormMsg = e?.message || String(e);
@@ -602,7 +674,7 @@ export class AdminComponent implements OnInit {
       }
       this.userFormMsg = 'Usuário criado com sucesso.';
       this.ui.showToast('Usuário criado com sucesso', 'success');
-      setTimeout(() => this.closeNewUserModal(), 1500);
+      this.setTimeout(() => this.closeNewUserModal(), 1500);
       this.loadUsers();
     } catch (e: any) {
       this.userFormMsg = e?.message || String(e);
@@ -808,7 +880,7 @@ export class AdminComponent implements OnInit {
       }
       this.companyFormMsg = '✅ Empresa criada com sucesso!';
       this.ui.showToast('Empresa criada com sucesso', 'success');
-      setTimeout(() => {
+      this.setTimeout(() => {
         this.closeNewCompanyModal();
         this.loadCompanies();
       }, 1500);
@@ -992,7 +1064,7 @@ export class AdminComponent implements OnInit {
       }
       this.editCompanyFormMsg = 'Empresa atualizada com sucesso.';
       this.ui.showToast('Empresa atualizada com sucesso', 'success');
-      setTimeout(() => this.closeEditCompanyModal(), 1500);
+      this.setTimeout(() => this.closeEditCompanyModal(), 1500);
       this.loadCompanies();
     } catch (e: any) {
       this.editCompanyFormMsg = e?.message || String(e);
@@ -1116,7 +1188,7 @@ export class AdminComponent implements OnInit {
       if (fileInput) fileInput.value = '';
 
       // Recarregar a lista de empresas
-      setTimeout(() => {
+      this.setTimeout(() => {
         this.loadCompanies();
         this.importMsg = '';
       }, 1500);

@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import { LegacyService } from '../../../services/legacy.service';
 import { formatCNPJ } from '../../../utils/formatters';
+import { CnpjFormatPipe } from '../../../pipes/cnpj-format.pipe';
 import { UiService } from '../../../services/ui.service';
 import { ReportService } from '../../../services/report.service';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -11,7 +12,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 @Component({
   standalone: true,
   selector: 'app-aep',
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, NgForOf, NgIf],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, NgForOf, NgIf, CnpjFormatPipe],
   templateUrl: './aep.component.html',
   styleUrls: ['./aep.component.css']
 })

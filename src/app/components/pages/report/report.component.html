@@ -18,7 +18,7 @@
                       <li *ngFor="let s of filteredCompanies" (mousedown)="selectCompanyFromSuggestion(s); $event.preventDefault()" (click)="$event.preventDefault()">
                         <span class="initials">{{ getCompanyInitials(s.name || s.razaoSocial || s.nomeFantasia) }}</span>
                         <span class="name">{{ s.name || s.razaoSocial || s.nomeFantasia }}</span>
-                        <span class="cnpj">{{ s.cnpj ? (' - ' + s.cnpj) : '' }}</span>
+                        <span class="cnpj">{{ s.cnpj ? (' - ' + (s.cnpj | cnpjFormat)) : '' }}</span>
                       </li>
                     </ul>
                   </div>
@@ -163,12 +163,6 @@
       <div class="form-group">
         <label class="form-label">Registros Fotográficos</label>
         <p class="record-instructions">Adicione registros com foto (captura ou upload), descrição e metadados. Cada clique em "Novo Registro" cria um novo bloco abaixo.</p>
-        <div class="record-add">
-          <button type="button" id="addRecordBtn" class="btn-add-empresa btn-sm add-record-btn" (click)="addRecord()">
-            <span class="icon" aria-hidden="true">➕</span>
-            <span>Novo Registro</span>
-          </button>
-        </div>
       </div>
 
       <div id="recordsContainer" class="records-list">

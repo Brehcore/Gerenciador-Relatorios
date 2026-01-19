@@ -209,17 +209,30 @@ export class ClientService {
 
       if (!resp.ok) {
         let errorMsg = `Status ${resp.status}: ${resp.statusText}`;
+        let errorDetails = null;
         try {
           const ct = resp.headers.get('content-type') || '';
           if (ct.includes('application/json')) {
             const errBody = await resp.json();
-            errorMsg += ` | ${JSON.stringify(errBody)}`;
+            errorDetails = errBody;
+            // Tenta usar a mensagem customizada do backend, senão usa o error
+            if (errBody.message) {
+              errorMsg = errBody.message;
+            } else if (errBody.error) {
+              errorMsg = errBody.error;
+            } else {
+              errorMsg += ` | ${JSON.stringify(errBody)}`;
+            }
           } else {
             const errText = await resp.text();
             errorMsg += ` | ${errText}`;
           }
         } catch (_) {}
-        throw new Error(errorMsg);
+        
+        const error = new Error(errorMsg);
+        (error as any).details = errorDetails;
+        (error as any).status = resp.status;
+        throw error;
       }
 
       console.log('[ClientService] Cliente deletado:', id);

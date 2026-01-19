@@ -10,6 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { AvailabilityCalendarComponent } from '../../shared/availability-calendar/availability-calendar.component';
 import { LegacyService } from '../../../services/legacy.service';
 import { formatCNPJ } from '../../../utils/formatters';
+import { CnpjFormatPipe } from '../../../pipes/cnpj-format.pipe';
 import { UiService } from '../../../services/ui.service';
 import { ReportService } from '../../../services/report.service';
 import { SignatureService } from '../../../services/signature.service';
@@ -35,7 +36,7 @@ interface ReportRecord {
 @Component({
   standalone: true,
   selector: 'app-report',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDatepickerModule, MatInputModule, MatNativeDateModule, MatButtonModule, MatIconModule, AvailabilityCalendarComponent, SignatureModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDatepickerModule, MatInputModule, MatNativeDateModule, MatButtonModule, MatIconModule, AvailabilityCalendarComponent, SignatureModalComponent, CnpjFormatPipe],
   templateUrl: './report.component.html',
   styleUrls: ['./report.component.css']
 })

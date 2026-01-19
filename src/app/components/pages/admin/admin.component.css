@@ -3,9 +3,11 @@
 /* Layout Base */
 .admin-page {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background-attachment: fixed;
   min-height: 100vh;
-  padding: 20px;
+  padding: 0 20px 20px 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
 }
 
 /* Acesso Negado */
@@ -45,6 +47,7 @@
 .admin-container {
   max-width: 1400px;
   margin: 0 auto;
+  padding-top: 20px;
 }
 
 /* Header */
@@ -1764,6 +1767,41 @@ label.btn.disabled {
   border-radius: 4px;
   padding: 4px 8px;
   font-size: 13px;
+}
+
+/* Badge CNPJ - Dropdown Companies */
+.badge-cnpj {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #666;
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+::ng-deep .ng-option .badge-cnpj {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: #f5f5f5;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #777;
+}
+
+::ng-deep .ng-value .badge-cnpj {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 4px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 3px;
+  font-size: 10px;
+  color: #888;
 }
 
 ::ng-deep .ng-select-multiple .ng-value-label {

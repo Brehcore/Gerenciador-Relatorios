@@ -32,9 +32,29 @@ export class ProfileComponent implements OnInit {
   formatDate(d: string|undefined|null): string {
     if (!d) return '-';
     try {
-      const dt = new Date(d);
-      if (isNaN(dt.getTime())) return d as string;
-      return dt.toLocaleDateString();
+      // Tenta converter diferentes formatos: YYYY-MM-DD, DD/MM/YYYY, etc
+      let dateStr = d.trim();
+      
+      // Se contém apenas números e caracteres de separação
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        // Formato ISO: YYYY-MM-DD
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
+      } else if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
+        // Já está em DD/MM/YYYY
+        return dateStr;
+      } else {
+        // Tenta como Date object
+        const dt = new Date(dateStr);
+        if (isNaN(dt.getTime())) {
+          return dateStr;
+        }
+        // Formata como DD/MM/YYYY
+        const day = String(dt.getDate()).padStart(2, '0');
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const year = dt.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
     } catch {
       return d as string;
     }
