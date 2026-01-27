@@ -126,7 +126,15 @@ export class ReportComponent implements OnInit, OnDestroy {
   // Timers para debounce
   private duplicityCheckTimer: any = null;
 
+  // Etapa A: Auto-save em localforage (IndexedDB)
+  private autoSaveDraftTimer: any = null;
+  private readonly AUTO_SAVE_INTERVAL = 3000; // 3 segundos
+  private readonly AUTO_SAVE_KEY = 'reportDraftAuto'; // Auto-save em IndexedDB
+
   async ngOnInit(): Promise<void> {
+    // Etapa 0: Verificar se há rascunho pendente antes de carregar novo
+    await this.checkAndPromptPendingDraft();
+    
     // Carrega rascunho salvo do localStorage
     this.loadDraftFromStorage();
     
@@ -186,6 +194,8 @@ export class ReportComponent implements OnInit, OnDestroy {
     };
     window.addEventListener('online', this.onlineListener);
 
+    // Etapa A: Inicializar auto-save em localforage
+    this.startAutoSaveDraft();
   }
 
   private wireSignatureModalButtons(): void {
@@ -301,6 +311,10 @@ export class ReportComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Limpar auto-save timer e salvar rascunho uma última vez
+    this.stopAutoSaveDraft();
+    this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao fazer save final no destroy:', e));
+    
     // Ao sair do componente, limpa o rascunho para que o próximo "Novo Relatório" comece vazio
     this.clearDraft();
     try { if (this.onlineListener) window.removeEventListener('online', this.onlineListener); } catch(_) {}
@@ -389,6 +403,187 @@ export class ReportComponent implements OnInit, OnDestroy {
     return index;
   }
 
+  // ============================================================================
+  // ETAPA A: Salvamento Automático em LocalForage (IndexedDB)
+  // ============================================================================
+
+  /**
+   * Verificar se há rascunho pendente e perguntar ao usuário se deseja retomar
+   * Chamado no ngOnInit antes de carregar qualquer outro dado
+   */
+  private async checkAndPromptPendingDraft(): Promise<void> {
+    try {
+      const autoDrafts = (await localforage.getItem(this.AUTO_SAVE_KEY)) as any || null;
+      
+      if (!autoDrafts) {
+        console.log('[Report] Nenhum rascunho auto-salvo encontrado');
+        return;
+      }
+
+      // Se há um rascunho pendente, perguntar se deseja retomar
+      const hasPendingData = autoDrafts && Object.keys(autoDrafts).length > 0;
+      if (!hasPendingData) return;
+
+      const lastSaved = autoDrafts.lastSaved ? new Date(autoDrafts.lastSaved).toLocaleString('pt-BR') : 'desconhecida';
+      
+      const message = `Você tem um rascunho auto-salvo desde ${lastSaved}.\n\nDeseja retomá-lo ou começar um novo?`;
+      
+      // Usar confirm() para perguntar ao usuário
+      const shouldResume = window.confirm(message);
+      
+      if (shouldResume) {
+        console.log('[Report] Retomando rascunho auto-salvo...');
+        await this.loadAutoSaveDraft();
+        this.ui.showToast('Rascunho retomado com sucesso!', 'success', 3000);
+      } else {
+        console.log('[Report] Descartando rascunho anterior e iniciando novo');
+        await this.clearAutoSaveDraft();
+      }
+    } catch (e) {
+      console.warn('[Report] Erro ao verificar rascunho pendente:', e);
+      // Não bloqueia o carregamento normal em caso de erro
+    }
+  }
+
+  /**
+   * Iniciar auto-save periódico em localforage (a cada 3 segundos)
+   * Garante que dados sejam persistidos mesmo com queda de conexão ou bateria
+   */
+  private startAutoSaveDraft(): void {
+    // Limpar timer anterior se existir
+    this.stopAutoSaveDraft();
+    
+    // Configurar auto-save a cada 3 segundos
+    this.autoSaveDraftTimer = setInterval(() => {
+      this.saveAutoSaveDraft().catch(e => {
+        console.warn('[Report] Erro no auto-save periódico:', e);
+      });
+    }, this.AUTO_SAVE_INTERVAL);
+
+    console.log('[Report] Auto-save iniciado (intervalo: ' + this.AUTO_SAVE_INTERVAL + 'ms)');
+  }
+
+  /**
+   * Parar auto-save periódico
+   */
+  private stopAutoSaveDraft(): void {
+    if (this.autoSaveDraftTimer) {
+      clearInterval(this.autoSaveDraftTimer);
+      this.autoSaveDraftTimer = null;
+      console.log('[Report] Auto-save parado');
+    }
+  }
+
+  /**
+   * Salvar rascunho automaticamente em localforage (IndexedDB)
+   * Inclui: formulário, registros, fotos em base64, geolocalização
+   * Chamado a cada 3 segundos ou após ações críticas (foto, mudança de campo)
+   */
+  private async saveAutoSaveDraft(): Promise<void> {
+    try {
+      // Só salvar se houver algo para salvar (registros ou dados do formulário)
+      if (this.records.length === 0) return;
+
+      const formData = {
+        title: (document.getElementById('reportTitle') as HTMLInputElement)?.value?.trim() || '',
+        visitDate: (document.getElementById('dataInspecao') as HTMLInputElement)?.value || '',
+        startTime: (document.getElementById('reportStartTime') as HTMLInputElement)?.value || '',
+        location: (document.getElementById('localInspecao') as HTMLInputElement)?.value?.trim() || '',
+        summary: (document.getElementById('reportSummary') as HTMLTextAreaElement)?.value?.trim() || '',
+        clientCompanyId: (document.getElementById('empresaCliente') as HTMLSelectElement)?.value?.trim() || '',
+        unitId: (document.getElementById('empresaUnidade') as HTMLSelectElement)?.value?.trim() || '',
+        sectorId: (document.getElementById('empresaSetor') as HTMLSelectElement)?.value?.trim() || '',
+        nextVisitDate: this.selectedNextVisitDate || '',
+        nextVisitShift: this.selectedNextVisitShift || '',
+        records: this.records,
+        companySearchTerm: this.companySearchTerm,
+        geolocation: this.geolocation,
+        lastSaved: new Date().toISOString()
+      };
+
+      await localforage.setItem(this.AUTO_SAVE_KEY, formData);
+      console.log('[Report] Auto-save concluído em localforage', {
+        registros: this.records.length,
+        timestamp: formData.lastSaved
+      });
+    } catch (e) {
+      console.error('[Report] Erro ao fazer auto-save:', e);
+      // Não lançar erro para não interromper o fluxo
+    }
+  }
+
+  /**
+   * Carregar rascunho do auto-save (IndexedDB)
+   * Restaura todos os campos do formulário e registros
+   */
+  private async loadAutoSaveDraft(): Promise<void> {
+    try {
+      const autoDrafts = (await localforage.getItem(this.AUTO_SAVE_KEY)) as any;
+      
+      if (!autoDrafts) {
+        console.warn('[Report] Nenhum auto-save encontrado');
+        return;
+      }
+
+      const data = autoDrafts;
+      console.log('[Report] Carregando auto-save:', data);
+
+      // Pequeno delay para garantir que o DOM foi renderizado
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Preencher os campos do formulário
+      const fields: Record<string, string> = {
+        'reportTitle': data.title || '',
+        'dataInspecao': data.visitDate || '',
+        'reportStartTime': data.startTime || '',
+        'localInspecao': data.location || '',
+        'reportSummary': data.summary || '',
+        'empresaCliente': data.clientCompanyId || '',
+        'empresaUnidade': data.unitId || '',
+        'empresaSetor': data.sectorId || ''
+      };
+
+      for (const [id, value] of Object.entries(fields)) {
+        const element = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+        if (element) {
+          element.value = value;
+          element.dispatchEvent(new Event('input', { bubbles: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+
+      // Restaurar dados do componente
+      this.selectedNextVisitDate = data.nextVisitDate || '';
+      this.selectedNextVisitShift = data.nextVisitShift || '';
+      this.records = data.records || [];
+      this.companySearchTerm = data.companySearchTerm || '';
+      this.selectedClientCompanyId = data.clientCompanyId || null;
+
+      // Limpar assinatura anterior (Regra de Ouro)
+      this.clearAllSignatures();
+      this.techPad = null;
+      this.clientPad = null;
+
+      console.log('[Report] Auto-save carregado com sucesso');
+    } catch (e) {
+      console.error('[Report] Erro ao carregar auto-save:', e);
+      this.ui.showToast('Erro ao carregar rascunho auto-salvo.', 'error');
+    }
+  }
+
+  /**
+   * Limpar auto-save do localforage
+   * Chamado quando usuário escolhe descartar rascunho ou após envio bem-sucedido
+   */
+  private async clearAutoSaveDraft(): Promise<void> {
+    try {
+      await localforage.removeItem(this.AUTO_SAVE_KEY);
+      console.log('[Report] Auto-save limpo');
+    } catch (e) {
+      console.error('[Report] Erro ao limpar auto-save:', e);
+    }
+  }
+
   removePhotos(index: number): void {
     if (index >= 0 && index < this.records.length) {
       this.records[index].photos = [];
@@ -401,8 +596,11 @@ export class ReportComponent implements OnInit, OnDestroy {
     if (!input?.files?.length) return;
 
     const file = input.files[0];
-    // Redimensiona a imagem antes de armazenar
+    console.log('[Report] onRecordFileChange - Iniciando redimensionamento de:', file.name, 'Tamanho original:', file.size);
+    
+    // Redimensiona a imagem antes de armazenar - MESMA FUNÇÃO PARA TODAS
     this.resizeImageTo6_8cm(file).then((resizedBase64: string) => {
+      console.log('[Report] onRecordFileChange - Redimensionamento bem-sucedido. Tamanho base64:', resizedBase64.length);
       if (recordIndex >= 0 && recordIndex < this.records.length) {
         if (!this.records[recordIndex].photos) {
           this.records[recordIndex].photos = [];
@@ -411,25 +609,18 @@ export class ReportComponent implements OnInit, OnDestroy {
         // Reatribui fotos e também o array principal para forçar detecção de mudanças
         this.records[recordIndex].photos = [...this.records[recordIndex].photos];
         this.records = [...this.records];
-        this.saveDraftToStorage();
+        // IMPORTANTE: Disparar auto-save após adicionar foto
+        this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao salvar foto no auto-save:', e));
+        // Limpar o input para permitir novo upload
+        input.value = '';
       }
     }).catch((error: Error) => {
-      console.error('[Report] Erro ao redimensionar imagem:', error);
-      // Fallback: usa a imagem original sem redimensionamento
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        if (recordIndex >= 0 && recordIndex < this.records.length) {
-          if (!this.records[recordIndex].photos) {
-            this.records[recordIndex].photos = [];
-          }
-          this.records[recordIndex].photos[photoIndex] = dataUrl;
-          this.records[recordIndex].photos = [...this.records[recordIndex].photos];
-          this.records = [...this.records];
-          this.saveDraftToStorage();
-        }
-      };
-      reader.readAsDataURL(file);
+      console.error('[Report] onRecordFileChange - Erro ao redimensionar imagem:', error.message);
+      // IMPORTANTE: NÃO usar fallback com imagem original - OBRIGAR redimensionamento bem-sucedido
+      // Tentar novamente com mais detalhes de erro
+      this.ui.showToast(`Erro ao processar imagem: ${error.message}. Tente novamente.`, 'error', 4000);
+      // Limpar o input
+      input.value = '';
     });
   }
 
@@ -558,6 +749,8 @@ export class ReportComponent implements OnInit, OnDestroy {
             this.records = [...this.records];
             this.saveDraftToStorage();
             this.ui.showToast('Foto adicionada com sucesso!', 'success');
+            // IMPORTANTE: Disparar auto-save após captura
+            this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao salvar foto capturada no auto-save:', e));
           } else {
             this.ui.showToast('Limite de 2 fotos por registro já atingido.', 'info');
           }
@@ -967,8 +1160,10 @@ export class ReportComponent implements OnInit, OnDestroy {
       // Processar arquivo por arquivo até preencher os slots disponíveis
       for (let i = 0; i < files.length && photosAdded < availableSlots; i++) {
         const file = files[i];
+        console.log('[Report] Processando arquivo da galeria:', file.name, 'Tamanho:', file.size);
         // Redimensiona a imagem antes de armazenar
         this.resizeImageTo6_8cm(file).then((resizedBase64: string) => {
+          console.log('[Report] Arquivo da galeria redimensionado com sucesso:', file.name, 'Tamanho base64:', resizedBase64.length);
           if (recordIndex >= 0 && recordIndex < this.records.length) {
             if (!this.records[recordIndex].photos) {
               this.records[recordIndex].photos = [];
@@ -980,28 +1175,13 @@ export class ReportComponent implements OnInit, OnDestroy {
               // Reatribui fotos e array principal para forçar detecção
               this.records[recordIndex].photos = [...this.records[recordIndex].photos];
               this.records = [...this.records];
-              this.saveDraftToStorage();
+              this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao salvar foto da galeria:', e));
             }
           }
         }).catch((error: Error) => {
-          console.error('[Report] Erro ao redimensionar imagem da galeria:', error);
-          // Fallback: usa a imagem original sem redimensionamento
-          const reader = new FileReader();
-          reader.onload = () => {
-            const dataUrl = reader.result as string;
-            if (recordIndex >= 0 && recordIndex < this.records.length) {
-              if (!this.records[recordIndex].photos) {
-                this.records[recordIndex].photos = [];
-              }
-              if (this.records[recordIndex].photos.length < maxPhotos) {
-                this.records[recordIndex].photos[this.records[recordIndex].photos.length] = dataUrl;
-                this.records[recordIndex].photos = [...this.records[recordIndex].photos];
-                this.records = [...this.records];
-                this.saveDraftToStorage();
-              }
-            }
-          };
-          reader.readAsDataURL(file);
+          console.error('[Report] Erro ao redimensionar imagem da galeria:', file.name, error.message);
+          // IMPORTANTE: NÃO usar fallback - OBRIGAR redimensionamento bem-sucedido
+          this.ui.showToast(`Erro ao processar ${file.name}: ${error.message}. Tente novamente.`, 'error', 4000);
         });
         photosAdded++;
       }
@@ -1015,7 +1195,10 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   onRecordChange(index: number): void {
     // Método chamado quando qualquer campo do registro é alterado
-    this.saveDraftToStorage();
+    this.saveDraftToStorage(); // Manter localStorage para compatibilidade
+    
+    // NOVO: Também salvar em localforage para persistência offline
+    this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao fazer auto-save ao modificar registro:', e));
   }
 
   /**
@@ -1945,9 +2128,19 @@ export class ReportComponent implements OnInit, OnDestroy {
   public async onSharedSignaturesConfirmed(data: any): Promise<void> {
     let payload: any = null;
     try {
+      // IMPORTANTE: Parar auto-save antes de enviar para evitar race conditions
+      this.stopAutoSaveDraft();
+
       // Validações
+      if (!this.selectedClientCompanyId) {
+        this.ui.showToast('Selecione uma empresa cliente antes de enviar.', 'warning');
+        this.startAutoSaveDraft();
+        return;
+      }
+
       if (!this.records || this.records.length === 0) {
         this.ui.showToast('Adicione pelo menos um registro antes de enviar.', 'warning');
+        this.startAutoSaveDraft();
         return;
       }
 
@@ -1955,6 +2148,7 @@ export class ReportComponent implements OnInit, OnDestroy {
         const record = this.records[i];
         if (!record.photos || record.photos.length === 0) {
           this.ui.showToast(`Registro ${i + 1}: Adicione pelo menos 1 foto.`, 'warning');
+          this.startAutoSaveDraft();
           return;
         }
       }
@@ -2034,6 +2228,7 @@ export class ReportComponent implements OnInit, OnDestroy {
 
       // Limpar rascunho
       localStorage.removeItem(this.DRAFT_KEY);
+      await this.clearAutoSaveDraft();
       this.records = [];
       this.reportDraft = { records: [] };
 
@@ -2042,6 +2237,9 @@ export class ReportComponent implements OnInit, OnDestroy {
       const error = e as any;
       const errorMsg = error?.message || 'Erro desconhecido';
       console.error('Erro ao enviar relatório via modal compartilhado:', error);
+      
+      // IMPORTANTE: Reiniciar auto-save em caso de erro para não perder dados
+      this.startAutoSaveDraft();
       
       // Se não conseguiu fazer POST (ex: sem internet), salvar rascunho com tudo que tem
       // Payload pode estar null se erro foi em validações iniciais (records, fotos)
@@ -2067,9 +2265,22 @@ export class ReportComponent implements OnInit, OnDestroy {
   public async handleSendReport(): Promise<void> {
     let payload: any = null;
     try {
+      // IMPORTANTE: Parar auto-save antes de enviar para evitar race conditions
+      this.stopAutoSaveDraft();
+
+      // Validar que empresa foi selecionada
+      if (!this.selectedClientCompanyId) {
+        this.ui.showToast('Selecione uma empresa cliente antes de enviar.', 'warning');
+        // Reiniciar auto-save se validação falhou
+        this.startAutoSaveDraft();
+        return;
+      }
+
       // Validar que pelo menos um registro foi adicionado
       if (!this.records || this.records.length === 0) {
         this.ui.showToast('Adicione pelo menos um registro antes de enviar.', 'warning');
+        // Reiniciar auto-save se validação falhou
+        this.startAutoSaveDraft();
         return;
       }
 
@@ -2078,6 +2289,8 @@ export class ReportComponent implements OnInit, OnDestroy {
         const record = this.records[i];
         if (!record.photos || record.photos.length === 0) {
           this.ui.showToast(`Registro ${i + 1}: Adicione pelo menos 1 foto.`, 'warning');
+          // Reiniciar auto-save se validação falhou
+          this.startAutoSaveDraft();
           return;
         }
       }
@@ -2092,6 +2305,8 @@ export class ReportComponent implements OnInit, OnDestroy {
       const clientSig = this.getClientSignatureBase64();
       if (!techSig || !clientSig) {
         this.ui.showToast('Ambas as assinaturas (Técnico e Responsável) são obrigatórias.', 'warning');
+        // Reiniciar auto-save se validação falhou
+        this.startAutoSaveDraft();
         return;
       }
 
@@ -2221,6 +2436,7 @@ export class ReportComponent implements OnInit, OnDestroy {
 
       // Limpar rascunho
       localStorage.removeItem(this.DRAFT_KEY);
+      await this.clearAutoSaveDraft();
       this.records = [];
       this.reportDraft = { records: [] };
 
@@ -2232,6 +2448,9 @@ export class ReportComponent implements OnInit, OnDestroy {
     } catch (e) {
       const error = e as any;
       let errorMsg = error.message || 'Erro desconhecido';
+      
+      // IMPORTANTE: Reiniciar auto-save em caso de erro para não perder dados
+      this.startAutoSaveDraft();
       
       // Log detalhado para debug de erro 500
       console.error('=== ERRO AO ENVIAR RELATÓRIO ===');
@@ -2404,47 +2623,85 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   private resizeImageTo6_8cm(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        reject(new Error(`Arquivo inválido: ${file.type}. Deve ser uma imagem.`));
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e: ProgressEvent<FileReader>) => {
-        const img = new Image();
-        img.onload = () => {
-          // 6.8 cm = 256 pixels (96 DPI padrão PDF)
-          const maxWidth = 256;
-          let width = img.width;
-          let height = img.height;
+        try {
+          const img = new Image();
+          
+          // Timeout para detectar imagens corrompidas
+          const loadTimeout = setTimeout(() => {
+            reject(new Error('Timeout ao carregar imagem (pode estar corrompida)'));
+          }, 5000);
 
-          // Calcula a proporção
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
+          img.onload = () => {
+            clearTimeout(loadTimeout);
+            try {
+              // 6.8 cm = 256 pixels (96 DPI padrão PDF) - MÁXIMO em ambas as dimensões
+              const maxWidth = 256;
+              const maxHeight = 256; // NOVO: Limitar também a altura para não quebrar tabelas
+              let width = img.width;
+              let height = img.height;
 
-          // Cria um canvas com as novas dimensões
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
+              console.log('[Report] Imagem original:', width, 'x', height, 'pixels, arquivo:', file.name);
 
-          // Desenha a imagem redimensionada no canvas
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error('Não foi possível obter contexto 2D do canvas'));
-            return;
-          }
-          ctx.drawImage(img, 0, 0, width, height);
+              // Calcula a proporção respeitando AMBAS as dimensões máximas
+              const widthRatio = width > maxWidth ? maxWidth / width : 1;
+              const heightRatio = height > maxHeight ? maxHeight / height : 1;
+              const ratio = Math.min(widthRatio, heightRatio);
+              
+              width = Math.round(width * ratio);
+              height = Math.round(height * ratio);
 
-          // Converte para base64 com qualidade melhorada (0.90 = 90%)
-          const resizedBase64 = canvas.toDataURL('image/jpeg', 0.90);
-          console.log('[Report] Imagem redimensionada para', width, 'x', height, 'pixels');
-          resolve(resizedBase64);
-        };
-        img.onerror = () => {
-          reject(new Error('Falha ao carregar imagem'));
-        };
-        img.src = e.target?.result as string;
+              console.log('[Report] Após redimensionamento:', width, 'x', height, 'pixels');
+
+              // Cria um canvas com as novas dimensões
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+
+              // Desenha a imagem redimensionada no canvas
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                reject(new Error('Falha ao obter contexto 2D do canvas'));
+                return;
+              }
+
+              ctx.drawImage(img, 0, 0, width, height);
+
+              // Converte para base64 com qualidade melhorada (0.90 = 90%)
+              try {
+                const resizedBase64 = canvas.toDataURL('image/jpeg', 0.90);
+                console.log('[Report] ✅ Imagem redimensionada com sucesso para', width, 'x', height, 'pixels (máx 256x256) | Tamanho base64:', (resizedBase64.length / 1024).toFixed(2), 'KB');
+                resolve(resizedBase64);
+              } catch (toDataUrlError) {
+                reject(new Error(`Falha ao converter canvas para base64: ${toDataUrlError}`));
+              }
+            } catch (drawError) {
+              reject(new Error(`Falha ao desenhar imagem no canvas: ${drawError}`));
+            }
+          };
+
+          img.onerror = () => {
+            clearTimeout(loadTimeout);
+            reject(new Error('Falha ao carregar imagem (arquivo corrompido ou formato não suportado)'));
+          };
+
+          img.src = e.target?.result as string;
+        } catch (error) {
+          reject(new Error(`Erro durante redimensionamento: ${error}`));
+        }
       };
+
       reader.onerror = () => {
-        reject(new Error('Falha ao ler arquivo'));
+        reject(new Error('Falha ao ler arquivo (permissão ou arquivo danificado)'));
       };
+
       reader.readAsDataURL(file);
     });
   }
