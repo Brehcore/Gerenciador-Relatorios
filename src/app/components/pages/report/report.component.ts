@@ -682,10 +682,10 @@ export class ReportComponent implements OnInit, OnDestroy {
         rotatedContext.translate(canvas.height, 0);
         rotatedContext.rotate(Math.PI / 2);
         rotatedContext.drawImage(canvas, 0, 0);
-        finalImageBase64 = rotatedCanvas.toDataURL('image/jpeg', 0.9);
+        finalImageBase64 = rotatedCanvas.toDataURL('image/jpeg', 0.99);
       } else {
         // Já está em portrait, usar normalmente
-        finalImageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+        finalImageBase64 = canvas.toDataURL('image/jpeg', 0.99);
       }
       
       this.capturedImageBase64 = finalImageBase64;
@@ -964,7 +964,7 @@ export class ReportComponent implements OnInit, OnDestroy {
   saveDrawing(): void {
     const canvas = document.getElementById('drawingCanvas') as HTMLCanvasElement;
     if (canvas) {
-      this.capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.9);
+      this.capturedImageBase64 = canvas.toDataURL('image/jpeg', 0.99);
       this.isDrawingMode = false;
       this.drawingTool = null;
     }
@@ -1122,7 +1122,7 @@ export class ReportComponent implements OnInit, OnDestroy {
       const img = new Image();
       img.onload = () => {
         cropCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
-        this.capturedImageBase64 = cropCanvas.toDataURL('image/jpeg', 0.9);
+        this.capturedImageBase64 = cropCanvas.toDataURL('image/jpeg', 0.99);
         this.isCroppingMode = false;
         this.ui.showToast('Foto recortada com sucesso!', 'success', 2000);
       };
@@ -2674,9 +2674,9 @@ export class ReportComponent implements OnInit, OnDestroy {
 
               ctx.drawImage(img, 0, 0, width, height);
 
-              // Converte para base64 com qualidade melhorada (0.90 = 90%)
+              // Converte para base64 com qualidade máxima (0.99 = quase sem perda)
               try {
-                const resizedBase64 = canvas.toDataURL('image/jpeg', 0.90);
+                const resizedBase64 = canvas.toDataURL('image/jpeg', 0.99);
                 console.log('[Report] ✅ Imagem redimensionada com sucesso para', width, 'x', height, 'pixels (máx 256x256) | Tamanho base64:', (resizedBase64.length / 1024).toFixed(2), 'KB');
                 resolve(resizedBase64);
               } catch (toDataUrlError) {
@@ -2734,8 +2734,8 @@ export class ReportComponent implements OnInit, OnDestroy {
         }
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Converte para base64 com qualidade otimizada (0.80 = 80%)
-        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.80);
+        // Converte para base64 com qualidade máxima (0.99 = quase sem perda)
+        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.99);
         console.log('[Report] Imagem (base64) redimensionada para', width, 'x', height, 'pixels com qualidade 80%');
         resolve(resizedBase64);
       };
