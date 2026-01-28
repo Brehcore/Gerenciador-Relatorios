@@ -18,6 +18,7 @@ import { AgendaValidationService } from '../../../services/agenda-validation.ser
 import { TechnicalVisitService } from '../../../services/technical-visit.service';
 import { ShiftAvailabilityService } from '../../../services/shift-availability.service';
 import { SignatureModalComponent } from '../../shared/signature-modal/signature-modal.component';
+import { KonvaEditorComponent } from '../../shared/konva-editor/konva-editor.component';
 import localforage from 'localforage';
 
 interface ReportRecord {
@@ -36,7 +37,7 @@ interface ReportRecord {
 @Component({
   standalone: true,
   selector: 'app-report',
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDatepickerModule, MatInputModule, MatNativeDateModule, MatButtonModule, MatIconModule, AvailabilityCalendarComponent, SignatureModalComponent, CnpjFormatPipe],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatDatepickerModule, MatInputModule, MatNativeDateModule, MatButtonModule, MatIconModule, AvailabilityCalendarComponent, SignatureModalComponent, KonvaEditorComponent, CnpjFormatPipe],
   templateUrl: './report.component.html',
   styleUrls: ['./report.component.css']
 })
@@ -89,6 +90,12 @@ export class ReportComponent implements OnInit, OnDestroy {
   cameraStream: MediaStream | null = null;
   capturedImageBase64: string | null = null;
   currentRecordIndexForCamera: number | null = null;
+  
+  // Propriedades para editor Konva
+  konvaEditorVisible = false;
+  konvaImageToEdit: string | null = null;
+  konvaEditTarget: { recordIndex: number; photoIndex: number } | null = null;
+  private _konvaSaveResolver: ((value?: unknown) => void) | null = null;
   
   // Propriedades para desenho na foto
   isDrawingMode = false;
@@ -591,37 +598,96 @@ export class ReportComponent implements OnInit, OnDestroy {
     }
   }
 
-  onRecordFileChange(event: Event, recordIndex: number, photoIndex: 0 | 1): void {
+  async onRecordFileChange(event: Event, recordIndex: number, photoIndex: 0 | 1): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (!input?.files?.length) return;
 
     const file = input.files[0];
-    console.log('[Report] onRecordFileChange - Iniciando redimensionamento de:', file.name, 'Tamanho original:', file.size);
-    
-    // Redimensiona a imagem antes de armazenar - MESMA FUNÇÃO PARA TODAS
-    this.resizeImageTo6_8cm(file).then((resizedBase64: string) => {
-      console.log('[Report] onRecordFileChange - Redimensionamento bem-sucedido. Tamanho base64:', resizedBase64.length);
-      if (recordIndex >= 0 && recordIndex < this.records.length) {
-        if (!this.records[recordIndex].photos) {
-          this.records[recordIndex].photos = [];
-        }
-        this.records[recordIndex].photos[photoIndex] = resizedBase64;
-        // Reatribui fotos e também o array principal para forçar detecção de mudanças
-        this.records[recordIndex].photos = [...this.records[recordIndex].photos];
-        this.records = [...this.records];
-        // IMPORTANTE: Disparar auto-save após adicionar foto
-        this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao salvar foto no auto-save:', e));
-        // Limpar o input para permitir novo upload
-        input.value = '';
-      }
-    }).catch((error: Error) => {
-      console.error('[Report] onRecordFileChange - Erro ao redimensionar imagem:', error.message);
-      // IMPORTANTE: NÃO usar fallback com imagem original - OBRIGAR redimensionamento bem-sucedido
-      // Tentar novamente com mais detalhes de erro
-      this.ui.showToast(`Erro ao processar imagem: ${error.message}. Tente novamente.`, 'error', 4000);
-      // Limpar o input
-      input.value = '';
+    try {
+      // Ler arquivo como dataURL e abrir editor Konva para edição antes de salvar
+      const dataUrl = await this.readFileAsDataURL(file);
+      await this.openKonvaEditorAndWait(dataUrl, recordIndex, photoIndex);
+    } catch (err: any) {
+      console.error('[Report] onRecordFileChange - Erro ao processar arquivo:', err?.message || err);
+      this.ui.showToast(`Erro ao abrir editor de imagem: ${err?.message || err}`, 'error', 4000);
+    } finally {
+      // Limpar o input para permitir novo upload
+      try { input.value = ''; } catch(_) {}
+    }
+  }
+
+  private readFileAsDataURL(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo'));
+      reader.readAsDataURL(file);
     });
+  }
+
+  private openKonvaEditorAndWait(dataUrl: string, recordIndex: number, photoIndex: number): Promise<void> {
+    return new Promise(async (resolve) => {
+      this.konvaImageToEdit = dataUrl;
+      this.konvaEditTarget = { recordIndex, photoIndex };
+      this.konvaEditorVisible = true;
+
+      // Resolverá quando o usuário salvar ou cancelar
+      this._konvaSaveResolver = (v?: any) => { this._konvaSaveResolver = null; resolve(); };
+    });
+  }
+
+  handleKonvaSave(editedBase64: string): void {
+    try {
+      if (!this.konvaEditTarget) return;
+      const { recordIndex, photoIndex } = this.konvaEditTarget;
+
+      // Redimensionar imagem editada para o padrão do relatório
+      this.resizeImageToBase64(editedBase64).then((resizedBase64: string) => {
+        if (recordIndex >= 0 && recordIndex < this.records.length) {
+          if (!this.records[recordIndex].photos) this.records[recordIndex].photos = [];
+          this.records[recordIndex].photos[photoIndex] = resizedBase64;
+          this.records[recordIndex].photos = [...this.records[recordIndex].photos];
+          this.records = [...this.records];
+          this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao salvar foto editada no auto-save:', e));
+        }
+      }).catch((err) => {
+        console.error('[Report] Erro ao redimensionar imagem editada:', err);
+        this.ui.showToast('Erro ao processar imagem editada.', 'error');
+      }).finally(() => {
+        this.konvaEditorVisible = false;
+        this.konvaImageToEdit = null;
+        this.konvaEditTarget = null;
+        if (this._konvaSaveResolver) this._konvaSaveResolver();
+      });
+    } catch (e) {
+      console.error('[Report] handleKonvaSave error:', e);
+      this.konvaEditorVisible = false;
+      if (this._konvaSaveResolver) this._konvaSaveResolver();
+    }
+  }
+
+  handleKonvaCancel(): void {
+    this.konvaEditorVisible = false;
+    this.konvaImageToEdit = null;
+    this.konvaEditTarget = null;
+    if (this._konvaSaveResolver) this._konvaSaveResolver();
+  }
+
+  // Abre o editor Konva para uma foto já existente no registro
+  openKonvaForExisting(recordIndex: number, photoIndex: number): void {
+    try {
+      if (!this.records[recordIndex] || !this.records[recordIndex].photos) return;
+      const img = this.records[recordIndex].photos[photoIndex];
+      if (!img) return;
+      this.konvaImageToEdit = img;
+      this.konvaEditTarget = { recordIndex, photoIndex };
+      this.konvaEditorVisible = true;
+      // resolver será chamado quando salvar/cancelar
+      this._konvaSaveResolver = (v?: any) => { this._konvaSaveResolver = null; };
+    } catch (e) {
+      console.error('[Report] openKonvaForExisting error:', e);
+      this.ui.showToast('Erro ao abrir editor da foto.', 'error');
+    }
   }
 
   async onCaptureClick(recordIndex: number): Promise<void> {

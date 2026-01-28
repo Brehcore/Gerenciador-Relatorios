@@ -403,6 +403,35 @@ fieldset.dados-relatorio legend { padding: 0 8px; margin-left: -8px; font-weight
   /* keep a square-ish ratio to avoid vertical squeezing on small screens */
   aspect-ratio: 1 / 1;
 }
+
+/* Edit button (circular) shown over photo */
+.btn-edit-photo {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 20;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.btn-edit-photo:hover { transform: translateY(-2px); background: rgba(0,0,0,0.75); }
+.btn-edit-photo svg { width: 20px; height: 20px; fill: #fff; display: block; }
+.btn-edit-photo .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+/* On small screens, keep the button slightly smaller */
+@media (max-width: 480px) {
+  .btn-edit-photo { width: 40px; height: 40px; top: 6px; right: 6px; }
+  .btn-edit-photo svg { width: 18px; height: 18px; }
+}
 .photo-slot.empty { 
   background: #f0f0f0; 
 }
