@@ -638,27 +638,51 @@ export class ReportComponent implements OnInit, OnDestroy {
 
   handleKonvaSave(editedBase64: string): void {
     try {
-      if (!this.konvaEditTarget) return;
-      const { recordIndex, photoIndex } = this.konvaEditTarget;
+      // If konvaEditTarget is set, save into the record photo slot
+      if (this.konvaEditTarget) {
+        const { recordIndex, photoIndex } = this.konvaEditTarget;
+        // Redimensionar imagem editada para o padrão do relatório
+        this.resizeImageToBase64(editedBase64).then((resizedBase64: string) => {
+          if (recordIndex >= 0 && recordIndex < this.records.length) {
+            if (!this.records[recordIndex].photos) this.records[recordIndex].photos = [];
+            this.records[recordIndex].photos[photoIndex] = resizedBase64;
+            this.records[recordIndex].photos = [...this.records[recordIndex].photos];
+            this.records = [...this.records];
+            this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao salvar foto editada no auto-save:', e));
+          }
+        }).catch((err) => {
+          console.error('[Report] Erro ao redimensionar imagem editada:', err);
+          this.ui.showToast('Erro ao processar imagem editada.', 'error');
+        }).finally(() => {
+          this.konvaEditorVisible = false;
+          this.konvaImageToEdit = null;
+          this.konvaEditTarget = null;
+          if (this._konvaSaveResolver) this._konvaSaveResolver();
+        });
+        return;
+      }
 
-      // Redimensionar imagem editada para o padrão do relatório
-      this.resizeImageToBase64(editedBase64).then((resizedBase64: string) => {
-        if (recordIndex >= 0 && recordIndex < this.records.length) {
-          if (!this.records[recordIndex].photos) this.records[recordIndex].photos = [];
-          this.records[recordIndex].photos[photoIndex] = resizedBase64;
-          this.records[recordIndex].photos = [...this.records[recordIndex].photos];
-          this.records = [...this.records];
-          this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao salvar foto editada no auto-save:', e));
-        }
-      }).catch((err) => {
-        console.error('[Report] Erro ao redimensionar imagem editada:', err);
-        this.ui.showToast('Erro ao processar imagem editada.', 'error');
-      }).finally(() => {
-        this.konvaEditorVisible = false;
-        this.konvaImageToEdit = null;
-        this.konvaEditTarget = null;
-        if (this._konvaSaveResolver) this._konvaSaveResolver();
-      });
+      // Otherwise, assume we're editing a just-captured image in the camera modal
+      if (this.cameraActive && this.capturedImageBase64) {
+        this.resizeImageToBase64(editedBase64).then((resizedBase64: string) => {
+          this.capturedImageBase64 = resizedBase64;
+        }).catch((err) => {
+          console.error('[Report] Erro ao redimensionar imagem editada (captura):', err);
+          this.ui.showToast('Erro ao processar imagem editada.', 'error');
+        }).finally(() => {
+          this.konvaEditorVisible = false;
+          this.konvaImageToEdit = null;
+          this.konvaEditTarget = null;
+          if (this._konvaSaveResolver) this._konvaSaveResolver();
+        });
+        return;
+      }
+
+      // Fallback: close editor
+      this.konvaEditorVisible = false;
+      this.konvaImageToEdit = null;
+      this.konvaEditTarget = null;
+      if (this._konvaSaveResolver) this._konvaSaveResolver();
     } catch (e) {
       console.error('[Report] handleKonvaSave error:', e);
       this.konvaEditorVisible = false;
@@ -687,6 +711,21 @@ export class ReportComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('[Report] openKonvaForExisting error:', e);
       this.ui.showToast('Erro ao abrir editor da foto.', 'error');
+    }
+  }
+
+  // Abre o editor Konva para a foto capturada mas ainda não confirmada
+  openKonvaForCaptured(): void {
+    try {
+      if (!this.capturedImageBase64) return;
+      this.konvaImageToEdit = this.capturedImageBase64;
+      // konvaEditTarget stays null to signal captured-edit flow
+      this.konvaEditTarget = null;
+      this.konvaEditorVisible = true;
+      this._konvaSaveResolver = (v?: any) => { this._konvaSaveResolver = null; };
+    } catch (e) {
+      console.error('[Report] openKonvaForCaptured error:', e);
+      this.ui.showToast('Erro ao abrir editor da foto capturada.', 'error');
     }
   }
 
