@@ -14,9 +14,14 @@ export class ProfileComponent implements OnInit {
 
   // dados do perfil
   profile: any = null;
+  hasCertificate = false;
+  certificateValidity: string | null = null;
 
   async ngOnInit(): Promise<void> {
     this.profile = await this.legacy.fetchUserProfile().catch(()=>null) || {};
+    // Load certificate info
+    this.hasCertificate = !!this.profile?.hasCertificate;
+    this.certificateValidity = this.profile?.certificateValidity || null;
   }
 
   initials(): string {

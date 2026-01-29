@@ -1,0 +1,489 @@
+.certificate-page {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: calc(100vh - 60px);
+  padding: 40px 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.certificate-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 40px;
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.header-icon {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1f8a1f 0%, #155a15 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.header-icon svg {
+  width: 36px;
+  height: 36px;
+}
+
+.header-text h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.cert-container {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (max-width: 768px) {
+  .cert-container {
+    grid-template-columns: 1fr;
+  }
+  .certificate-header {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+.cert-form {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-label {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.field-icon {
+  color: #1f8a1f;
+  flex-shrink: 0;
+}
+
+.file-input-wrapper {
+  position: relative;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-input-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  color: #666;
+}
+
+.file-input-label:hover {
+  border-color: #1f8a1f;
+  background: #f0f8f0;
+  color: #1f8a1f;
+}
+
+.file-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.file-placeholder svg {
+  color: #ccc;
+}
+
+.file-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #1f8a1f;
+  font-weight: 500;
+}
+
+.file-selected svg {
+  color: #1f8a1f;
+}
+
+.password-input {
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.password-input:focus {
+  outline: none;
+  border-color: #1f8a1f;
+  box-shadow: 0 0 0 3px rgba(31, 138, 31, 0.1);
+}
+
+.password-input::placeholder {
+  color: #999;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #1f8a1f 0%, #155a15 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(31, 138, 31, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(31, 138, 31, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.message-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border-left: 4px solid;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-success {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+  color: #166534;
+}
+
+.message-error {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+  color: #991b1b;
+}
+
+.message-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.message-icon svg {
+  width: 20px;
+  height: 20px;
+  color: inherit;
+}
+
+.message-text {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.cert-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.uploaded-cert {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.cert-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-right: 44px;
+}
+
+.cert-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+.btn-remove-cert {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.btn-remove-cert:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-remove-cert:active {
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(0.95);
+}
+
+.btn-remove-cert svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cert-validity {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.validity-label {
+  font-size: 14px;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.validity-date {
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.info-box {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.info-icon {
+  flex-shrink: 0;
+  color: #1f8a1f;
+  margin-top: 2px;
+}
+
+.info-title {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 13px;
+}
+
+.info-desc {
+  color: #666;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .certificate-header {
+    gap: 16px;
+    padding: 24px;
+    flex-direction: column;
+    text-align: center;
+  }
+  .cert-form {
+    padding: 24px;
+  }
+  .certificate-page {
+    padding: 20px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .uploaded-cert {
+    padding: 16px;
+    margin-top: 16px;
+  }
+  .cert-header-row {
+    margin-bottom: 12px;
+    padding-right: 40px;
+  }
+  .cert-title {
+    font-size: 15px;
+  }
+  .btn-remove-cert {
+    width: 28px;
+    height: 28px;
+    top: 10px;
+    right: 10px;
+  }
+  .btn-remove-cert svg {
+    width: 16px;
+    height: 16px;
+  }
+  .cert-validity {
+    gap: 6px;
+  }
+  .validity-label,
+  .validity-date {
+    font-size: 12px;
+  }
+  .certificate-page {
+    padding: 16px 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .uploaded-cert {
+    padding: 12px;
+    margin-top: 12px;
+  }
+  .cert-title {
+    font-size: 14px;
+  }
+  .btn-remove-cert {
+    width: 24px;
+    height: 24px;
+    top: 8px;
+    right: 8px;
+  }
+  .btn-remove-cert svg {
+    width: 14px;
+    height: 14px;
+  }
+  .validity-label,
+  .validity-date {
+    font-size: 11px;
+  }
+}

@@ -142,6 +142,22 @@
 								<path d="M2 6l10 8 10-8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
 							</svg>
 						</button>
+						<!-- Sign button - always visible (changes visual state when already signed) -->
+						<button
+							*ngIf="!d.isOfflineDraft && hasUserCertificate"
+							class="icon-btn sign-btn"
+							[ngClass]="{ 'signed-icon': isDocumentSigned(d) }"
+							[disabled]="isSigning || !d.pdfGenerated || isDocumentSigned(d)"
+							(click)="onSignClick(d)"
+							[title]="getSignButtonTitle(d)"
+							aria-label="Assinar documento">
+							<!-- Signature/Pen icon -->
+							<svg *ngIf="!isSigning" class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+								<path [attr.stroke]="isDocumentSigned(d) ? '#10b981' : '#8b5cf6'" d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+							<!-- Loading spinner -->
+							<span *ngIf="isSigning" class="sign-spinner" title="Assinando documento..."></span>
+						</button>
 						<!-- Edit icon - mostra quando documento NÃO está assinado -->
 						<button *ngIf="!isDocumentSigned(d)" class="icon-btn" (click)="editDocument(d)" title="Editar documento">
 							<svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

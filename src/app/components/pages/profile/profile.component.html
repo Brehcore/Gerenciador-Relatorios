@@ -45,6 +45,12 @@
           <div class="info-label">🎂 Data de Nascimento</div>
           <div class="info-value">{{ formatDate(profile?.birthDate || profile?.dataNascimento) }}</div>
         </div>
+        <div class="info-card">
+          <div class="info-label">🔐 Certificado Digital</div>
+          <div class="info-value">
+            <a class="manage-certificate" routerLink="/certificado-digital">{{ hasCertificate && certificateValidity ? ('Validade: ' + certificateValidity) : 'Sem certificado digital' }}</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>

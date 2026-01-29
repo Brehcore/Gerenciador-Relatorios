@@ -10,6 +10,7 @@ import { GroupComponent } from './components/pages/group/group.component';
 import { ChecklistComponent } from './components/pages/checklist/checklist.component';
 import { DocumentsComponent } from './components/pages/documents/documents.component';
 import { ProfileComponent } from './components/pages/profile/profile.component';
+import { CertificateComponent } from './components/pages/certificate/certificate.component';
 import { ChangePasswordComponent } from './components/pages/change-password/change-password.component';
 import { AdminGuard } from './guards/admin.guard';
 // Forms and ChangePassword pages are not yet migrated; remove their imports for now
@@ -24,6 +25,7 @@ export const routes: Routes = [
 	{ path: 'agenda', component: AgendaComponent },
 	{ path: 'documents', component: DocumentsComponent },
 	{ path: 'profile', component: ProfileComponent },
+	{ path: 'certificado-digital', component: CertificateComponent },
 	// rotas forms/change-password removidas temporariamente até migração completa
 	{ path: 'admin', component: AdminComponent, canActivate: [AdminGuard] },
 	{ path: 'aep', component: AepComponent },

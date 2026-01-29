@@ -44,8 +44,14 @@ export class DocumentsComponent implements OnInit, OnDestroy {
   pdfModalOpen = false;
   pdfBlobUrl: string | null = null;
 
+  // User certificate presence
+  hasUserCertificate = false;
+
   // Email State
   emailSendingFor: string = '';  // ID do documento sendo enviado (para mostrar loading)
+
+  // Signing State
+  isSigning = false;
 
   // Drafts salvos offline
   offlineDrafts: any[] = [];
@@ -58,6 +64,8 @@ export class DocumentsComponent implements OnInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     await this.loadDocumentsList();
+    // verificar se o usuário tem certificado digital carregado
+    void this.checkUserCertificate();
     // Carregar e exibir drafts offline após carregar documentos do servidor
     try {
       await this.loadOfflineDrafts();
@@ -130,6 +138,16 @@ export class DocumentsComponent implements OnInit, OnDestroy {
         this.documents = pageData.content || [];
         this.totalElements = pageData.totalElements || 0;
         this.totalPages = pageData.totalPages || 0;
+        
+        // DEBUG: Log do estado de assinatura dos documentos
+        console.log('[Documents] Document signed status:', this.documents.map(d => ({
+          id: d.id,
+          title: d.title,
+          signed: d.signed,
+          hasSigned: d.hasSigned,
+          isSigned: d.isSigned,
+          status: d.status
+        })));
         
         // Enriquecer documentos com e-mail de cliente (se não tiver)
         await this.enrichDocumentsWithClientEmail();
@@ -500,12 +518,160 @@ export class DocumentsComponent implements OnInit, OnDestroy {
 
   // Helper: Check if a document is signed and therefore immutable
   isDocumentSigned(item: any): boolean {
-    return item && typeof item.signed === 'boolean' ? item.signed : false;
+    // Verificar icpSigned E/OU icpSignedAt
+    // Se icpSigned é true, está assinado
+    // Se icpSignedAt tem valor, também está assinado
+    if (!item) return false;
+    return item.icpSigned === true || (item.icpSignedAt != null && item.icpSignedAt !== '');
+  }
+
+  // Helper: Format ISO datetime to readable format
+  formatSignatureDateTime(dateTimeStr: any): string {
+    if (!dateTimeStr) return 'Data não disponível';
+    try {
+      // Parse ISO string: "2026-01-29T20:30:55.639653"
+      const date = new Date(dateTimeStr);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${day}/${month}/${year} às ${hours}:${minutes}:${seconds}`;
+    } catch (e) {
+      return String(dateTimeStr);
+    }
   }
 
   // Helper: Check if edit is allowed for a document
   canEditDocument(item: any): boolean {
     return !this.isDocumentSigned(item);
+  }
+
+  // Helper: Check if document is signable (visit type and not already signed)
+  isDocumentSignable(item: any): boolean {
+    if (!item) return false;
+    const type = String(item.type || item.documentType || '').toUpperCase();
+    const hasGenerated = item.generated || item.pdfGenerated || item.status?.includes('generated');
+    return (type.includes('VISIT') || type.includes('RELAT') || type.includes('CHECK') || type.includes('RISCO')) 
+      && !this.isDocumentSigned(item) 
+      && hasGenerated;
+  }
+
+  // Check whether logged-in user has uploaded a certificate
+  private async checkUserCertificate(): Promise<void> {
+    try {
+      // Use GET /users/me and the `hasCertificate` field
+      const me = await this.legacy.fetchUserProfile(true);
+      if (me && me.hasCertificate === true) {
+        this.hasUserCertificate = true;
+        return;
+      }
+      this.hasUserCertificate = false;
+    } catch (e) {
+      console.warn('[Documents] checkUserCertificate failed', e);
+      this.hasUserCertificate = false;
+    }
+  }
+
+  // Get sign button title
+  getSignButtonTitle(item: any): string {
+    if (this.isDocumentSigned(item)) {
+      const signedAt = this.formatSignatureDateTime(item.icpSignedAt);
+      return `Assinado Digitalmente ${signedAt}`;
+    }
+    if (!item.pdfGenerated) return 'Gere o PDF primeiro para assinar';
+    return 'Assinar documento digitalmente';
+  }
+
+  // Determine the signing endpoint based on document type
+  private getSigningEndpoint(d: any): string {
+    const type = String(d.type || d.documentType || '').toUpperCase();
+    const docId = d.id || d.reportId;
+    
+    if (type.includes('CHECK') || type.includes('RISCO')) {
+      return `/risk-checklist/${encodeURIComponent(docId)}/sign`;
+    } else if (type.includes('VISIT') || type.includes('RELAT')) {
+      return `/technical-visits/${encodeURIComponent(docId)}/sign`;
+    }
+    return `/technical-visits/${encodeURIComponent(docId)}/sign`; // default
+  }
+
+  // Sign document with digital signature
+  async signDocument(d: any): Promise<void> {
+    if (!d || !d.id) {
+      this.ui.showToast('Documento inválido', 'error');
+      return;
+    }
+
+    // Verify PDF exists before signing
+    if (!d.generated && !d.pdfGenerated) {
+      this.ui.showToast('Gere o PDF primeiro para assinar', 'warning');
+      return;
+    }
+
+    const proceed = window.confirm('Deseja assinar este documento digitalmente? Esta ação não pode ser desfeita.');
+    if (!proceed) return;
+
+    this.isSigning = true;
+    const toastId = this.ui.showToast('Assinando documento...', 'info');
+    try {
+      const docId = d.id || d.reportId;
+      const endpoint = this.getSigningEndpoint(d);
+      const resp = await fetch(`${this.legacy.apiBaseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: this.legacy.authHeaders()
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: 'Erro ao assinar' }));
+        this.ui.showToast(err?.error || `Erro ${resp.status}`, 'error');
+        return;
+      }
+
+      const result = await resp.json();
+      this.ui.showToast('Documento assinado com sucesso!', 'success');
+
+      // Update document status in list
+      const idx = this.documents.findIndex(doc => (doc.id || doc.reportId) === docId);
+      if (idx >= 0) {
+        this.documents[idx].signed = true;
+      }
+
+      // Reload PDF if currently viewing
+      if (this.pdfModalOpen) {
+        setTimeout(() => {
+          this.viewDocument(d);
+        }, 500);
+      }
+    } catch (err: any) {
+      console.error('[Documents] Erro ao assinar:', err);
+      this.ui.showToast(err?.message || 'Erro ao assinar documento', 'error');
+    } finally {
+      this.isSigning = false;
+    }
+  }
+
+  // Click handler unified for sign button: show info when already signed, otherwise trigger signing
+  onSignClick(d: any): void {
+    if (!d) return;
+    if (this.isDocumentSigned(d)) {
+      // Exibir popup/aviso informando que já foi assinado digitalmente com data/hora
+      const signedAt = this.formatSignatureDateTime(d.icpSignedAt);
+      const message = `Este documento foi assinado digitalmente em:\n\n${signedAt}`;
+      this.ui.showToast('Documento já assinado digitalmente.', 'info', 4000);
+      try { window.alert(message); } catch(_) {}
+      return;
+    }
+
+    // Se não tem PDF gerado, avisar ao usuário
+    if (!d.generated && !d.pdfGenerated) {
+      this.ui.showToast('Gere o PDF primeiro para assinar', 'warning');
+      return;
+    }
+
+    // Chamar fluxo de assinatura
+    void this.signDocument(d);
   }
 
   documentTypeToSlug(type: any) {

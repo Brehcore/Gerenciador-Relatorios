@@ -1,0 +1,136 @@
+<div class="certificate-page">
+  <div class="certificate-header">
+    <div class="header-icon">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 11h6M9 15h6M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <h1>Certificado Digital</h1>
+      <p class="subtitle">Gerencie seu certificado digital (.pfx ou .p12) com segurança</p>
+    </div>
+  </div>
+
+  <div class="cert-container">
+    <div class="cert-form">
+      <div class="form-section" *ngIf="!hasCertificate">
+        <h2 class="section-title">Enviar Certificado</h2>
+        
+        <label class="field">
+          <div class="field-label">
+            <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Arquivo do Certificado
+          </div>
+          <div class="file-input-wrapper">
+            <input type="file" accept=".pfx,.p12" (change)="onFileChange($event)" id="fileInput" class="file-input-hidden" />
+            <label for="fileInput" class="file-input-label">
+              <span *ngIf="!file" class="file-placeholder">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5v14m7-7H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Clique ou arraste o arquivo aqui
+              </span>
+              <span *ngIf="file" class="file-selected">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                {{ file.name }}
+              </span>
+            </label>
+          </div>
+        </label>
+
+        <label class="field">
+          <div class="field-label">
+            <svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17 8h-1V6.5C16 4.57 14.43 3 12.5 3S9 4.57 9 6.5V8H8c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h9c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-5 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H9V6.5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5V8z" fill="currentColor"/>
+            </svg>
+            Senha do Certificado
+          </div>
+          <input type="password" [(ngModel)]="password" placeholder="Digite a senha do certificado" class="password-input" />
+        </label>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" (click)="submit()" [disabled]="uploading || !file || !password">
+            <span *ngIf="!uploading" class="btn-content">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5v14m7-7H5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Enviar Certificado
+            </span>
+            <span *ngIf="uploading" class="btn-content">
+              <span class="spinner"></span>
+              Enviando...
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Show active certificate when hasCertificate is true -->
+      <div class="form-section" *ngIf="hasCertificate">
+        <h2 class="section-title">Certificado Ativo</h2>
+        <div class="uploaded-cert">
+          <div class="cert-header-row">
+            <div class="cert-title">Certificado Digital</div>
+            <button class="btn-remove-cert" (click)="deleteCertificate()" title="Remover certificado">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="cert-validity">
+            <div class="validity-label">Validade</div>
+            <div class="validity-date">{{ certificateValidity || '-' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="message" class="message-box" [class.message-success]="message.includes('sucesso')" [class.message-error]="!message.includes('sucesso')">
+        <div class="message-icon">
+          <svg *ngIf="message.includes('sucesso')" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg *ngIf="!message.includes('sucesso')" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 8v4m0 4v.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="message-text">{{ message }}</div>
+      </div>
+    </div>
+
+    <div class="cert-info">
+      <h2 class="section-title">Informações de Segurança</h2>
+      <div class="info-box">
+        <div class="info-item">
+          <svg class="info-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z" fill="currentColor"/>
+          </svg>
+          <div>
+            <div class="info-title">Arquivo Seguro</div>
+            <div class="info-desc">Seu certificado é armazenado de forma segura no servidor</div>
+          </div>
+        </div>
+        <div class="info-item">
+          <svg class="info-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z" fill="currentColor"/>
+          </svg>
+          <div>
+            <div class="info-title">Criptografia</div>
+            <div class="info-desc">Sua senha é criptografada com AES-256</div>
+          </div>
+        </div>
+        <div class="info-item">
+          <svg class="info-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z" fill="currentColor"/>
+          </svg>
+          <div>
+            <div class="info-title">Acesso Controlado</div>
+            <div class="info-desc">Apenas você pode acessar seu certificado</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -82,7 +82,8 @@ import { LegacyService } from '../../../services/legacy.service';
         </button>
         <div class="user-menu" role="menu" [attr.aria-hidden]="!userMenuOpen">
           <button class="user-menu-item" (click)="goto('profile')">Meu Perfil</button>
-          <button class="user-menu-item" (click)="logout()">Sair</button>
+          <button class="user-menu-item" (click)="goto('certificado-digital')">Certificado Digital</button>
+                    <button class="user-menu-item" (click)="logout()">Sair</button>
         </div>
       </div>
     </div>

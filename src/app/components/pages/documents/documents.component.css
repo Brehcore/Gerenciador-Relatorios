@@ -193,6 +193,11 @@
 }
 .icon-svg { display: block; width: 16px; height: 16px; color: #6b7280; transition: color var(--transition-fast); }
 
+/* Signed icon visual */
+.sign-btn.signed-icon .icon-svg { color: #10b981; }
+.sign-btn.signed-icon:hover:not(:disabled) { background: #d1fae5; }
+.sign-btn .icon-svg { transition: color 0.15s ease; }
+
 /* Email icon colors */
 .icon-btn.email-unsent .icon-svg { color: #ef4444; }  /* Vermelho para não enviado */
 .icon-btn.email-unsent:hover:not(:disabled) { background: #fee2e2; }  /* Vermelho claro no hover */
@@ -280,6 +285,23 @@
 .pdf-modal-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #eef3f8; }
 .pdf-modal-body { padding:12px; }
 .pdf-modal .btn-close { background:#f1f5f9; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; }
+
+/* Sign spinner animation */
+.sign-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  border-top-color: #8b5cf6;
+  border-radius: 50%;
+  animation: spin-signature 0.8s linear infinite;
+}
+
+@keyframes spin-signature {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
 /* Mobile-specific: convert table rows into stacked cards for readability */
 @media (max-width: 640px) {

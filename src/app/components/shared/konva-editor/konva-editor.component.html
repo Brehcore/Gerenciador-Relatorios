@@ -1,38 +1,38 @@
 <div class="konva-editor-modal">
   <div class="konva-editor-content">
     <div class="konva-toolbar">
-      <button type="button" class="icon-btn" (click)="setTool('pen')" [class.active]="tool==='pen'" title="Caneta">
+      <button type="button" class="icon-btn" (click)="setTool('pen')" [class.active]="tool==='pen'" title="Caneta" aria-label="Ferramenta caneta">
         <!-- Pen SVG -->
         <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
       </button>
-      <button type="button" class="icon-btn" (click)="setTool('circle')" [class.active]="tool==='circle'" title="Círculo">
+      <button type="button" class="icon-btn" (click)="setTool('circle')" [class.active]="tool==='circle'" title="Círculo" aria-label="Ferramenta círculo">
         <!-- Circle SVG -->
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
       </button>
-      <button type="button" class="icon-btn" (click)="setTool('rect')" [class.active]="tool==='rect'" title="Retângulo">
+      <button type="button" class="icon-btn" (click)="setTool('rect')" [class.active]="tool==='rect'" title="Retângulo" aria-label="Ferramenta retângulo">
         <!-- Rect SVG -->
         <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1" ry="1"/></svg>
       </button>
-      <button type="button" class="icon-btn" (click)="setTool('arrow')" [class.active]="tool==='arrow'" title="Seta">
+      <button type="button" class="icon-btn" (click)="setTool('arrow')" [class.active]="tool==='arrow'" title="Seta" aria-label="Ferramenta seta">
         <!-- Arrow SVG -->
         <svg viewBox="0 0 24 24"><path d="M2 12l17-8v6l3-1v10L2 12z"/></svg>
       </button>
 
-      <button type="button" class="icon-btn" (click)="clearDrawings()" title="Limpar desenhos">
+      <button type="button" class="icon-btn" (click)="clearDrawings()" title="Limpar desenhos" aria-label="Limpar desenhos">
         <!-- Eraser / Trash SVG -->
         <svg viewBox="0 0 24 24"><path d="M16 9v10H8V9h8m-1.5-6h-5l-1 1H5v2h14V4h-4.5l-1-1z"/></svg>
       </button>
 
       <div class="toolbar-sep"></div>
 
-      <label class="icon-control" title="Cor">
+      <label class="icon-control" for="strokeColorInput" title="Cor">
         <svg viewBox="0 0 24 24"><path d="M12 2C8 8 2 12 6 18c4 6 10 2 10-4 0-6-4-12-4-12z"/></svg>
-        <input type="color" [value]="strokeColor" (input)="setColor($event.target.value)" />
+        <input id="strokeColorInput" type="color" [value]="strokeColor" aria-label="Cor do traço" (input)="setColor($event.target.value)" />
       </label>
 
-      <label class="icon-control" title="Espessura">
+      <label class="icon-control" for="strokeWidthInput" title="Espessura">
         <svg viewBox="0 0 24 24"><path d="M3 17h18v2H3v-2zm3-6h12v2H6v-2z"/></svg>
-        <input type="range" min="1" max="24" [value]="strokeWidth" (input)="setWidth($any($event.target).value)" />
+        <input id="strokeWidthInput" type="range" min="1" max="24" [value]="strokeWidth" aria-label="Espessura do traço" (input)="setWidth($any($event.target).value)" />
       </label>
 
       <div class="toolbar-spacer"></div>
@@ -42,17 +42,17 @@
     
     <div class="konva-footer">
       <div class="footer-actions">
-        <button type="button" class="icon-btn" (click)="undoLast()" title="Desfazer">
+        <button type="button" class="icon-btn" (click)="undoLast()" title="Desfazer" aria-label="Desfazer">
           <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.86 0 7 3.14 7 7 0 .34-.03.67-.08 1h2.02C21.99 11.57 17.52 7 12 7z"/></svg>
         </button>
-        <button type="button" class="icon-btn" (click)="redoLast()" title="Refazer">
+        <button type="button" class="icon-btn" (click)="redoLast()" title="Refazer" aria-label="Refazer">
           <svg viewBox="0 0 24 24"><path d="M12 5v4l5-5-5-5v4C6.14 3 2 7.14 2 12c0 .34.03.67.08 1H.06C.01 12.67 0 12.34 0 12 0 6.48 4.48 2 10 2z"/></svg>
         </button>
 
         <div class="footer-sep"></div>
 
-        <button type="button" class="btn-action" (click)="saveImage()">Salvar</button>
-        <button type="button" class="btn-action" (click)="cancelEdit()">Cancelar</button>
+        <button type="button" class="btn-action" (click)="saveImage()" aria-label="Salvar imagem">Salvar</button>
+        <button type="button" class="btn-action" (click)="cancelEdit()" aria-label="Cancelar edição">Cancelar</button>
       </div>
     </div>
   </div>
