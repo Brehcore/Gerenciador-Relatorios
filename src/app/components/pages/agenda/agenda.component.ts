@@ -35,6 +35,8 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
   loading = false;
   currentEditingItem: AgendaResponseDTO | null = null;
   isAdmin = false;
+  // quando true, exibe a agenda GLOBAL (todos os técnicos) em vez da própria
+  showGlobalAgenda = false;
   viewMode: 'calendar' | 'list' = 'calendar';
 
   calendarOptions: CalendarOptions = {
@@ -196,7 +198,28 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
           this.viewMode = 'list';
           this.eventos = await this.agendaService.listAllEventos();
         } else {
-          this.eventos = await this.agendaService.listEventos();
+          // Usuário não-admin pode alternar entre agenda pessoal e agenda global
+          if (this.showGlobalAgenda) {
+            // tentar obter intervalo visível do calendário; se não disponível, buscar sem intervalo
+            try {
+              const calApi = this.fullcalendar?.getApi?.();
+              if (calApi && calApi.view && calApi.view.activeStart && calApi.view.activeEnd) {
+                const activeStart: Date = calApi.view.activeStart as Date;
+                const activeEnd: Date = calApi.view.activeEnd as Date;
+                const startDate = activeStart.toISOString().split('T')[0];
+                // activeEnd costuma ser exclusivo, subtrair 1ms para garantir inclusão do dia anterior
+                const endDate = new Date(activeEnd.getTime() - 1).toISOString().split('T')[0];
+                this.eventos = await this.agendaService.listGlobalEventos(startDate, endDate);
+              } else {
+                this.eventos = await this.agendaService.listGlobalEventos();
+              }
+            } catch (err) {
+              console.warn('Erro ao obter agenda global com intervalo, tentando sem intervalo', err);
+              this.eventos = await this.agendaService.listGlobalEventos();
+            }
+          } else {
+            this.eventos = await this.agendaService.listEventos();
+          }
         }
       }
       // DEBUG: Log the eventos to check if shift field is present
@@ -345,6 +368,22 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
   async onModalConfirm(data: any): Promise<void> {
     try {
       this.loading = true;
+      // Antes de criar/atualizar/reagendar, verificar conflitos globais e avisar o usuário
+      try {
+        const conflictMsg = await this.agendaService.checkGlobalConflicts(data.date, data.shift || 'MANHA');
+        if (conflictMsg) {
+          const proceed = await this.ui.confirm(`${conflictMsg}\n\nDeseja continuar mesmo assim?`);
+          if (!proceed) {
+            this.ui.showToast('Operação cancelada pelo usuário', 'info');
+            this.loading = false;
+            return;
+          }
+        }
+      } catch (err) {
+        // Não bloquear operação em caso de falha na verificação; apenas logar
+        console.warn('Verificação de conflito global falhou', err);
+      }
+
       if (data.mode === 'create') {
         await this.agendaService.createEvento({
           title: data.title,

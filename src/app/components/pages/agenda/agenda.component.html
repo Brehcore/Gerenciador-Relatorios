@@ -26,6 +26,14 @@
           📋 Listagem
         </button>
       </div>
+      <!-- Switch: Agenda Global / Pessoal -->
+      <div class="global-switch" *ngIf="!isAdmin" style="display:flex;align-items:center;gap:8px;margin-left:12px;">
+        <label style="font-weight:600;color:#374151;">Agenda global</label>
+        <label class="switch">
+          <input type="checkbox" [(ngModel)]="showGlobalAgenda" (change)="loadEventos()" />
+          <span class="slider"></span>
+        </label>
+      </div>
       <button type="button" class="btn-primary" (click)="createNew()">+ Novo Evento</button>
       <button type="button" class="btn-secondary" (click)="loadEventos()">🔄 Atualizar</button>
     </div>

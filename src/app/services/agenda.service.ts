@@ -194,4 +194,50 @@ export class AgendaService {
     }
     return resp.json();
   }
+
+  /**
+   * Retorna todos os eventos visíveis globalmente para todos os usuários
+   * dentro de um intervalo de datas.
+   * Endpoint backend: GET /api/agenda/global?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+   */
+  async listGlobalEventos(startDate?: string, endDate?: string): Promise<AgendaResponseDTO[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const url = `${this.baseUrl()}/global${params.toString() ? `?${params.toString()}` : ''}`;
+    const resp = await fetch(url, { headers: this.legacy.authHeaders() });
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      throw new Error(`Falha ao listar eventos globais: ${errorText}`);
+    }
+    return resp.json();
+  }
+
+  /**
+   * Verifica conflitos GLOBAIS para uma data/turno fornecidos.
+   * Backend deve responder 200 OK com corpo texto contendo mensagem de aviso
+   * quando houver conflito, ou body vazio / string vazia quando estiver livre.
+   * Exemplo: GET /api/agenda/check-global-conflicts?date=YYYY-MM-DD&shift=MANHA
+   */
+  async checkGlobalConflicts(date: string, shift?: 'MANHA' | 'TARDE'): Promise<string | null> {
+    const params = new URLSearchParams();
+    if (date) params.set('date', date);
+    if (shift) params.set('shift', shift);
+    const url = `${this.baseUrl()}/check-global-conflicts?${params.toString()}`;
+    const resp = await fetch(url, { headers: this.legacy.authHeaders() });
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      throw new Error(`Falha ao verificar conflitos globais: ${errorText}`);
+    }
+    // Backend retorna JSON: { warning: '...' } quando há conflito, ou {} quando livre
+    try {
+      const json = await resp.json();
+      if (json && typeof json.warning === 'string' && json.warning.trim().length) return json.warning.trim();
+      return null;
+    } catch (e) {
+      // fallback: se não puder parsear JSON, tentar ler texto
+      const text = (await resp.text()).trim();
+      return text.length ? text : null;
+    }
+  }
 }
