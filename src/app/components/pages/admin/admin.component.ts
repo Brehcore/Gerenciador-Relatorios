@@ -29,6 +29,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   private pendingTimeouts: number[] = [];
 
   accessDenied = false;
+  isAdmin = false;
   loadingUsers = false;
   loadingCompanies = false;
   loadingCompanyForm = false;
@@ -139,12 +140,14 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const role = this.legacy.getUserRole();
-    if (!(role && role.toLowerCase().includes('admin'))) {
-      this.accessDenied = true;
-      return;
+    this.isAdmin = !!(role && String(role).toUpperCase() === 'ADMIN');
+    // Allow non-admin authenticated users to view clients section. Load only the
+    // datasets appropriate for the user's role.
+    if (this.isAdmin) {
+      this.loadUsers();
+      this.loadCompanies();
     }
-    this.loadUsers();
-    this.loadCompanies();
+    // Clients list is available to all authenticated users
     this.loadClients();
     
     // Setup debounced CNPJ search com takeUntil para limpeza automática

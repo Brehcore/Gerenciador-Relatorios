@@ -464,11 +464,19 @@ export class AgendaModalComponent {
 
     this.isSubmitting = true;
     this.confirmAction.emit({ ...this.formData });
-    // reset após emitir
-    setTimeout(() => {
-      this.isOpen = false;
-      this.isSubmitting = false;
-      this.errors = {};
-    }, 300);
+    // Não fechar automaticamente: o componente pai deve fechar o modal explicitamente
+    // apenas quando a operação no backend for bem-sucedida. Isso permite manter o
+    // formulário aberto em caso de erro (ex.: 409 Conflict) para que o usuário
+    // corrija os dados sem perder o que preencheu.
+    this.isSubmitting = true;
+  }
+
+  // Método público para fechar o modal após sucesso
+  close(): void {
+    this.isOpen = false;
+    this.isSubmitting = false;
+    this.errors = {};
+    // reset formData to defaults but keep minimal state
+    this.formData = { mode: 'create', title: '', description: null, date: '', reason: null, shift: 'MANHA', type: null, referenceId: null, clientName: null, unitName: null, sectorName: null, originalVisitDate: null, sourceVisitId: null, responsibleName: null };
   }
 }

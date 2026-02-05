@@ -18,8 +18,8 @@
 
     <!-- Conteúdo -->
     <div class="admin-content">
-      <!-- Seção de Usuários -->
-      <section class="admin-section users-section">
+      <!-- Seção de Usuários (somente ADMIN) -->
+        <section class="admin-section users-section" *ngIf="isAdmin">
         <div class="section-header">
           <div class="section-title-wrapper">
             <div class="section-icon">👥</div>
@@ -33,7 +33,7 @@
         <div class="section-body">
           <div class="users-intro">
             <p>Nesta seção você pode cadastrar novos usuários e gerenciar os usuários existentes do sistema. Cada usuário pode ter perfil de acesso diferenciado (Usuário ou Administrador).</p>
-            <button type="button" class="btn btn-primary" (click)="openNewUserModal()" title="Criar novo usuário">
+            <button *ngIf="isAdmin" type="button" class="btn btn-primary" (click)="openNewUserModal()" title="Criar novo usuário">
               ➕ Novo Usuário
             </button>
           </div>
@@ -160,7 +160,7 @@
         </div>
       </section>
 
-      <!-- Seção de Clientes (mesmo estilo do card Usuários) -->
+      <!-- Seção de Clientes (visível para todos os usuários autenticados) -->
       <section class="admin-section users-section clients-section">
         <div class="section-header">
           <div class="section-title-wrapper">
@@ -173,11 +173,12 @@
         </div>
 
         <div class="section-body">
-          <div class="users-intro">
+            <div class="users-intro">
             <p>Nesta seção você pode cadastrar novos clientes e gerenciar os clientes existentes do sistema.</p>
-            <button type="button" class="btn btn-primary" (click)="openNewClientModal()" title="Criar novo cliente">
+            <button *ngIf="isAdmin" type="button" class="btn btn-primary" (click)="openNewClientModal()" title="Criar novo cliente">
               ➕ Novo Cliente
             </button>
+            <div *ngIf="!isAdmin" style="font-size:0.95rem;color:#475569;">Apenas leitura disponível para seu perfil.</div>
           </div>
         </div>
 
@@ -224,11 +225,11 @@
                       </span>
                       <span *ngIf="!(c.companyNames || []).length" class="text-muted">-</span>
                     </td>
-                    <td class="actions-col">
-                      <button class="btn-action btn-edit" (click)="openEditClientModal(c)" title="Editar cliente">
+                      <td class="actions-col">
+                      <button *ngIf="isAdmin" class="btn-action btn-edit" (click)="openEditClientModal(c)" title="Editar cliente">
                         ✏️
                       </button>
-                      <button class="btn-action btn-delete" (click)="deleteClient(c.id)" title="Excluir cliente">
+                      <button *ngIf="isAdmin" class="btn-action btn-delete" (click)="deleteClient(c.id)" title="Excluir cliente">
                         🗑️
                       </button>
                       <button class="btn-action btn-info" (click)="getClientDetails(c.id)" title="Ver detalhes">
@@ -243,7 +244,7 @@
         </div>
       </section>
 
-      <section class="admin-section companies-section">
+      <section *ngIf="isAdmin" class="admin-section companies-section">
         <div class="section-header">
           <div class="section-title-wrapper">
             <div class="section-icon">🏢</div>
@@ -252,7 +253,7 @@
               <p class="section-subtitle">Gerenciar empresas cadastradas</p>
             </div>
           </div>
-          <button type="button" class="btn btn-primary" (click)="openNewCompanyModal()" title="Criar nova empresa">
+          <button *ngIf="isAdmin" type="button" class="btn btn-primary" (click)="openNewCompanyModal()" title="Criar nova empresa">
             ➕ Nova Empresa
           </button>
         </div>

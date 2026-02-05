@@ -604,12 +604,23 @@ export class ReportComponent implements OnInit, OnDestroy {
 
     const file = input.files[0];
     try {
-      // Ler arquivo como dataURL e abrir editor Konva para edição antes de salvar
+      // Ler arquivo como dataURL, redimensionar e salvar diretamente no slot indicado
       const dataUrl = await this.readFileAsDataURL(file);
-      await this.openKonvaEditorAndWait(dataUrl, recordIndex, photoIndex);
+      const resized = await this.resizeImageToBase64(dataUrl);
+
+      if (recordIndex >= 0 && recordIndex < this.records.length) {
+        if (!this.records[recordIndex].photos) this.records[recordIndex].photos = [];
+        this.records[recordIndex].photos[photoIndex] = resized;
+        this.records[recordIndex].photos = [...this.records[recordIndex].photos];
+        this.records = [...this.records];
+        // Persistir rascunho
+        this.saveDraftToStorage();
+        this.saveAutoSaveDraft().catch(e => console.warn('[Report] Erro ao salvar foto no auto-save:', e));
+        this.ui.showToast('Foto adicionada. Use o botão ✏️ para editar se desejar.', 'success', 3000);
+      }
     } catch (err: any) {
       console.error('[Report] onRecordFileChange - Erro ao processar arquivo:', err?.message || err);
-      this.ui.showToast(`Erro ao abrir editor de imagem: ${err?.message || err}`, 'error', 4000);
+      this.ui.showToast(`Erro ao processar imagem: ${err?.message || err}`, 'error', 4000);
     } finally {
       // Limpar o input para permitir novo upload
       try { input.value = ''; } catch(_) {}

@@ -1,10 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { Router, CanDeactivate } from '@angular/router';
+import { Router, CanDeactivate, CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class PasswordResetGuard implements CanDeactivate<any> {
   private router = inject(Router);
+  private auth = inject(AuthService);
 
   canDeactivate(component: any): boolean | Observable<boolean> {
     // Verificar se o componente tem o modal de reset de senha aberto
@@ -15,3 +17,29 @@ export class PasswordResetGuard implements CanDeactivate<any> {
     return true;
   }
 }
+
+export const requirePasswordResetGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  // Se NÃO precisa resetar a senha, redireciona para dashboard
+  if (!authService.isPasswordResetRequired()) {
+    router.navigate(['/dashboard']);
+    return false;
+  }
+
+  return true;
+};
+
+export const blockUntilPasswordResetGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  // Se precisa resetar a senha, bloqueia acesso a essa rota
+  if (authService.isPasswordResetRequired()) {
+    router.navigate(['/reset-senha-obrigatoria']);
+    return false;
+  }
+
+  return true;
+};

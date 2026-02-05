@@ -113,9 +113,11 @@ export class ClientService {
     try {
       const url = `${this.legacy.apiBaseUrl}/clients`;
       const payload = {
+        id: client.id || 0,
         name: client.name,
         email: client.email,
-        companyIds: client.companyIds || []
+        companyIds: client.companyIds || [],
+        companyNames: client.companyNames || []
       };
 
       console.log('[ClientService] POST', url, payload);

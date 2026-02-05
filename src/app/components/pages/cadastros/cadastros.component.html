@@ -1,0 +1,541 @@
+<div class="cadastros-root">
+  <!-- Cadastro de Empresas Section -->
+  <section class="cadastros-section">
+    <h2>🏢 Cadastro de Empresas</h2>
+    <p>Registre novas empresas no sistema com seus dados, unidades e setores de atuação.</p>
+    
+    <div class="form-card">
+      <!-- Informações Gerais -->
+      <div class="form-group">
+        <label for="companyName">Nome da Empresa *</label>
+        <input 
+          id="companyName" 
+          type="text" 
+          [(ngModel)]="companyName" 
+          placeholder="Digite o nome completo da empresa"
+          maxlength="255" />
+      </div>
+
+      <div class="form-group">
+        <label for="companyCnpj">CNPJ *</label>
+        <input 
+          id="companyCnpj" 
+          type="text" 
+          [ngModel]="companyCnpj" 
+          (ngModelChange)="onCnpjChange($event)" 
+          placeholder="00.000.000/0000-00"
+          maxlength="18" />
+        <div class="field-error" *ngIf="companyCnpj && !isCnpjValid()">CNPJ inválido</div>
+      </div>
+
+      <!-- Unidades Section -->
+      <div class="units-section">
+        <h4>📍 Unidades</h4>
+        <div class="unit-inputs">
+          <input 
+            #unitName 
+            type="text" 
+            placeholder="Nome da unidade"
+            maxlength="255" />
+          <input 
+            #unitCnpj 
+            type="text" 
+            placeholder="CNPJ (opcional)"
+            maxlength="18" />
+          <button 
+            type="button" 
+            class="btn-secondary btn-sm"
+            (click)="addUnit(unitName.value, unitCnpj.value); unitName.value=''; unitCnpj.value='';">
+            + Adicionar
+          </button>
+        </div>
+        <ul class="units-list" *ngIf="dynamicUnits.length > 0">
+          <li *ngFor="let u of dynamicUnits; let i = index">
+            <span>{{ u.name }}<small *ngIf="u.cnpj"> ({{ u.cnpj }})</small></span>
+            <button 
+              type="button" 
+              (click)="removeUnit(i)"
+              class="btn-sm">
+              Remover
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Setores Section -->
+      <div class="units-section">
+        <h4>🏭 Setores</h4>
+        <div class="sector-inputs">
+          <input 
+            [(ngModel)]="sectorInput" 
+            type="text" 
+            placeholder="Nome do setor"
+            maxlength="255" />
+          <button 
+            type="button" 
+            class="btn-secondary btn-sm"
+            (click)="addSector(sectorInput); sectorInput=''">
+            + Adicionar
+          </button>
+        </div>
+        <ul class="sectors-list" *ngIf="dynamicSectors.length > 0">
+          <li *ngFor="let s of dynamicSectors; let i = index">
+            <span>{{ s }}</span>
+            <button 
+              type="button" 
+              (click)="removeSector(i)"
+              class="btn-sm">
+              Remover
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Submit -->
+      <div class="actions">
+        <button 
+          class="btn-primary" 
+          (click)="submit()" 
+          [disabled]="submitting || !companyName || !companyCnpj || !isCnpjValid()">
+          {{ submitting ? '⏳ Enviando...' : '✓ Cadastrar Empresa' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de Empresas Cadastradas -->
+    <div class="list-section">
+      <button 
+        type="button" 
+        class="toggle-btn"
+        (click)="toggleCompaniesList()">
+        <span class="toggle-icon" [class.open]="showCompaniesList">▶</span>
+        {{ showCompaniesList ? 'Ocultar' : 'Mostrar' }} Empresas Cadastradas ({{ companiesTotalElements }})
+      </button>
+      
+      <div class="list-container" *ngIf="showCompaniesList">
+        <div *ngIf="companiesList.length === 0" class="empty-state">
+          <p>Nenhuma empresa cadastrada ainda.</p>
+        </div>
+        
+        <!-- Paginação de Empresas -->
+        <div *ngIf="companiesList.length > 0 && companiesTotalPages > 1" class="pagination-wrapper">
+          <div class="pagination-info">
+            <span>Página {{ companiesPage + 1 }} de {{ companiesTotalPages }} (Total: {{ companiesTotalElements }} empresas)</span>
+            <span class="page-size-selector">
+              Itens por página:
+              <select [(ngModel)]="companiesPageSize" (change)="onCompaniesPageSizeChange()" class="page-size-select" aria-label="Selecionar quantidade de empresas por página">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </span>
+          </div>
+          <div class="pagination-controls">
+            <button 
+              type="button"
+              class="btn-pagination"
+              (click)="previousCompaniesPage()"
+              [disabled]="companiesPage === 0"
+              title="Página anterior">
+              ← Anterior
+            </button>
+            <div class="pagination-numbers">
+              <button 
+                *ngFor="let page of getPageNumbers(companiesTotalPages, companiesPage)"
+                type="button"
+                class="btn-page-number"
+                [class.active]="page === companiesPage"
+                [class.ellipsis]="page === -1"
+                [disabled]="page === -1"
+                (click)="goToCompaniesPage(page)"
+                title="Ir para página {{ page + 1 }}">
+                {{ page === -1 ? '...' : page + 1 }}
+              </button>
+            </div>
+            <button 
+              type="button"
+              class="btn-pagination"
+              (click)="nextCompaniesPage()"
+              [disabled]="companiesPage >= companiesTotalPages - 1"
+              title="Próxima página">
+              Próxima →
+            </button>
+          </div>
+        </div>
+
+        <ul class="items-list" *ngIf="companiesList.length > 0">
+          <li *ngFor="let company of companiesList" class="list-item">
+            <div class="item-header">
+              <div class="item-info">
+                <h5>{{ company.name }}</h5>
+                <p class="item-meta">CNPJ: {{ company.cnpj }}</p>
+              </div>
+              <div class="item-actions">
+                <button 
+                  type="button"
+                  class="btn-edit"
+                  (click)="openEditCompanyModal(company)"
+                  title="Editar empresa">
+                  ✏️ Editar
+                </button>
+              </div>
+            </div>
+            <div class="item-details" *ngIf="company.units && company.units.length > 0">
+              <p><strong>Unidades:</strong> {{ getUnitNames(company) }}</p>
+            </div>
+            <div class="item-details" *ngIf="company.sectors && company.sectors.length > 0">
+              <p><strong>Setores:</strong> {{ company.sectors.join(', ') }}</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Divider -->
+  <hr />
+
+  <!-- Cadastro de Clientes Section -->
+  <section class="cadastros-section">
+    <h2>👥 Cadastro de Clientes</h2>
+    <p>Crie novos clientes e associe-os às empresas cadastradas no sistema.</p>
+    
+    <div class="form-card">
+      <div class="form-group">
+        <label for="clientName">Nome do Cliente *</label>
+        <input 
+          id="clientName" 
+          type="text" 
+          [(ngModel)]="clientName" 
+          placeholder="Digite o nome completo do cliente"
+          maxlength="255" />
+      </div>
+
+      <div class="form-group">
+        <label for="clientEmail">Email *</label>
+        <input 
+          id="clientEmail" 
+          type="email" 
+          [(ngModel)]="clientEmail" 
+          placeholder="email@empresa.com"
+          maxlength="255" />
+      </div>
+
+      <div class="form-group">
+        <label>Empresas Associadas</label>
+        <ng-select
+          [(ngModel)]="selectedCompanyIds"
+          [items]="allCompaniesForModal"
+          bindLabel="name"
+          bindValue="id"
+          appendTo="body"
+          placeholder="Selecione as empresas..."
+          [compareWith]="compareCompanies"
+          [multiple]="true"
+          [searchable]="true"
+          [clearable]="true"
+          [hideSelected]="false"
+          notFoundText="Nenhuma empresa encontrada">
+          <ng-template ng-label-tmp let-item="item">
+            <span>{{ item.name }}</span>
+            <span *ngIf="item.cnpj" class="badge-cnpj">{{ item.cnpj }}</span>
+          </ng-template>
+          <ng-template ng-option-tmp let-item="item">
+            <span>{{ item.name }}</span>
+            <span *ngIf="item.cnpj" class="badge-cnpj">{{ item.cnpj }}</span>
+          </ng-template>
+        </ng-select>
+      </div>
+
+      <!-- Submit -->
+      <div class="actions">
+        <button 
+          class="btn-primary" 
+          (click)="submitClient()" 
+          [disabled]="clientSubmitting || !clientName || !clientEmail">
+          {{ clientSubmitting ? '⏳ Enviando...' : '✓ Cadastrar Cliente' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de Clientes Cadastrados -->
+    <div class="list-section">
+      <button 
+        type="button" 
+        class="toggle-btn"
+        (click)="toggleClientsList()">
+        <span class="toggle-icon" [class.open]="showClientsList">▶</span>
+        {{ showClientsList ? 'Ocultar' : 'Mostrar' }} Clientes Cadastrados ({{ clientsTotalElements }})
+      </button>
+      
+      <div class="list-container" *ngIf="showClientsList">
+        <div *ngIf="clientsList.length === 0" class="empty-state">
+          <p>Nenhum cliente cadastrado ainda.</p>
+        </div>
+        
+        <!-- Paginação de Clientes -->
+        <div *ngIf="clientsList.length > 0 && clientsTotalPages > 1" class="pagination-wrapper">
+          <div class="pagination-info">
+            <span>Página {{ clientsPage + 1 }} de {{ clientsTotalPages }} (Total: {{ clientsTotalElements }} clientes)</span>
+            <span class="page-size-selector">
+              Itens por página:
+              <select [(ngModel)]="clientsPageSize" (change)="onClientsPageSizeChange()" class="page-size-select" aria-label="Selecionar quantidade de clientes por página">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </span>
+          </div>
+          <div class="pagination-controls">
+            <button 
+              type="button"
+              class="btn-pagination"
+              (click)="previousClientsPage()"
+              [disabled]="clientsPage === 0"
+              title="Página anterior">
+              ← Anterior
+            </button>
+            <div class="pagination-numbers">
+              <button 
+                *ngFor="let page of getPageNumbers(clientsTotalPages, clientsPage)"
+                type="button"
+                class="btn-page-number"
+                [class.active]="page === clientsPage"
+                [class.ellipsis]="page === -1"
+                [disabled]="page === -1"
+                (click)="goToClientsPage(page)"
+                title="Ir para página {{ page + 1 }}">
+                {{ page === -1 ? '...' : page + 1 }}
+              </button>
+            </div>
+            <button 
+              type="button"
+              class="btn-pagination"
+              (click)="nextClientsPage()"
+              [disabled]="clientsPage >= clientsTotalPages - 1"
+              title="Próxima página">
+              Próxima →
+            </button>
+          </div>
+        </div>
+
+        <ul class="items-list" *ngIf="clientsList.length > 0">
+          <li *ngFor="let client of clientsList" class="list-item">
+            <div class="item-header">
+              <div class="item-info">
+                <h5>{{ client.name }}</h5>
+                <p class="item-meta">Email: {{ client.email }}</p>
+              </div>
+              <div class="item-actions">
+                <button 
+                  type="button"
+                  class="btn-edit"
+                  (click)="openEditClientModal(client)"
+                  title="Editar cliente">
+                  ✏️ Editar
+                </button>
+              </div>
+            </div>
+            <div class="item-details" *ngIf="client.companies && client.companies.length > 0">
+              <p><strong>Empresas:</strong> {{ getClientCompanyNames(client) }}</p>
+            </div>
+            <div class="item-details" *ngIf="client.companyNames && client.companyNames.length > 0">
+              <p><strong>Empresas:</strong> {{ client.companyNames.join(', ') }}</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal de Editar Empresa -->
+  <div class="modal-backdrop" *ngIf="showEditCompanyModal" (click)="closeEditCompanyModal()"></div>
+  <div class="modal" *ngIf="showEditCompanyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Editar Empresa</h3>
+        <button type="button" class="modal-close" (click)="closeEditCompanyModal()" title="Fechar modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="editCompanyName">Nome da Empresa *</label>
+          <input 
+            id="editCompanyName"
+            type="text" 
+            [(ngModel)]="editCompanyName" 
+            placeholder="Digite o nome completo da empresa"
+            maxlength="255"
+            [disabled]="editSubmitting" />
+        </div>
+
+        <div class="form-group">
+          <label for="editCompanyCnpj">CNPJ *</label>
+          <input 
+            id="editCompanyCnpj"
+            type="text" 
+            [(ngModel)]="editCompanyCnpj" 
+            placeholder="00.000.000/0000-00"
+            maxlength="18"
+            [disabled]="editSubmitting" />
+        </div>
+
+        <!-- Unidades -->
+        <div class="units-section">
+          <h4>📍 Unidades</h4>
+          <div class="unit-inputs">
+            <input 
+              #editUnitName 
+              type="text" 
+              placeholder="Nome da unidade"
+              maxlength="255" 
+              [disabled]="editSubmitting" />
+            <input 
+              #editUnitCnpj 
+              type="text" 
+              placeholder="CNPJ (opcional)"
+              maxlength="18" 
+              [disabled]="editSubmitting" />
+            <button 
+              type="button" 
+              class="btn-secondary btn-sm"
+              (click)="addEditUnit(editUnitName.value, editUnitCnpj.value); editUnitName.value=''; editUnitCnpj.value='';"
+              [disabled]="editSubmitting">
+              + Adicionar
+            </button>
+          </div>
+          <ul class="units-list" *ngIf="editDynamicUnits.length > 0">
+            <li *ngFor="let u of editDynamicUnits; let i = index">
+              <span>{{ u.name }}<small *ngIf="u.cnpj"> ({{ u.cnpj }})</small></span>
+              <button 
+                type="button" 
+                (click)="removeEditUnit(i)"
+                class="btn-sm"
+                [disabled]="editSubmitting">
+                Remover
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Setores -->
+        <div class="units-section">
+          <h4>🏭 Setores</h4>
+          <div class="sector-inputs">
+            <input 
+              #editSectorInput
+              type="text" 
+              placeholder="Nome do setor"
+              maxlength="255"
+              [disabled]="editSubmitting" />
+            <button 
+              type="button" 
+              class="btn-secondary btn-sm"
+              (click)="addEditSector(editSectorInput.value); editSectorInput.value=''"
+              [disabled]="editSubmitting">
+              + Adicionar
+            </button>
+          </div>
+          <ul class="sectors-list" *ngIf="editDynamicSectors.length > 0">
+            <li *ngFor="let s of editDynamicSectors; let i = index">
+              <span>{{ s }}</span>
+              <button 
+                type="button" 
+                (click)="removeEditSector(i)"
+                class="btn-sm"
+                [disabled]="editSubmitting">
+                Remover
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button 
+          type="button" 
+          class="btn-secondary" 
+          (click)="closeEditCompanyModal()"
+          [disabled]="editSubmitting">
+          Cancelar
+        </button>
+        <button 
+          type="button" 
+          class="btn-primary"
+          (click)="submitEditCompany()"
+          [disabled]="editSubmitting || !editCompanyName || !editCompanyCnpj">
+          {{ editSubmitting ? '⏳ Atualizando...' : '✓ Atualizar Empresa' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Modal de Editar Cliente -->
+  <div class="modal-backdrop" *ngIf="showEditClientModal" (click)="closeEditClientModal()"></div>
+  <div class="modal" *ngIf="showEditClientModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Editar Cliente</h3>
+        <button type="button" class="modal-close" (click)="closeEditClientModal()" title="Fechar modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="editClientName">Nome *</label>
+          <input 
+            id="editClientName"
+            type="text" 
+            [(ngModel)]="editClientName" 
+            placeholder="Digite o nome do cliente"
+            maxlength="255"
+            [disabled]="editClientSubmitting" />
+        </div>
+
+        <div class="form-group">
+          <label for="editClientEmail">Email *</label>
+          <input 
+            id="editClientEmail"
+            type="email" 
+            [(ngModel)]="editClientEmail" 
+            placeholder="Digite o email do cliente"
+            maxlength="255"
+            [disabled]="editClientSubmitting" />
+        </div>
+
+        <div class="form-group">
+          <label for="editClientCompanies">Empresas</label>
+          <ng-select 
+            id="editClientCompanies"
+            [(ngModel)]="editSelectedCompanyIds"
+            [items]="allCompaniesForModal"
+            bindLabel="name"
+            bindValue="id"
+            placeholder="Selecione as empresas"
+            [multiple]="true"
+            [disabled]="editClientSubmitting"
+            [compareWith]="compareCompanies"
+            appendTo="body">
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button 
+          type="button" 
+          class="btn-secondary" 
+          (click)="closeEditClientModal()"
+          [disabled]="editClientSubmitting">
+          Cancelar
+        </button>
+        <button 
+          type="button" 
+          class="btn-primary"
+          (click)="submitEditClient()"
+          [disabled]="editClientSubmitting || !editClientName || !editClientEmail">
+          {{ editClientSubmitting ? '⏳ Atualizando...' : '✓ Atualizar Cliente' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

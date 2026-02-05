@@ -203,19 +203,34 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
             // tentar obter intervalo visível do calendário; se não disponível, buscar sem intervalo
             try {
               const calApi = this.fullcalendar?.getApi?.();
+              let startDate: string | undefined;
+              let endDate: string | undefined;
               if (calApi && calApi.view && calApi.view.activeStart && calApi.view.activeEnd) {
                 const activeStart: Date = calApi.view.activeStart as Date;
                 const activeEnd: Date = calApi.view.activeEnd as Date;
-                const startDate = activeStart.toISOString().split('T')[0];
+                startDate = activeStart.toISOString().split('T')[0];
                 // activeEnd costuma ser exclusivo, subtrair 1ms para garantir inclusão do dia anterior
-                const endDate = new Date(activeEnd.getTime() - 1).toISOString().split('T')[0];
-                this.eventos = await this.agendaService.listGlobalEventos(startDate, endDate);
+                endDate = new Date(activeEnd.getTime() - 1).toISOString().split('T')[0];
               } else {
-                this.eventos = await this.agendaService.listGlobalEventos();
+                // fallback: use current month range
+                const now = new Date();
+                const first = new Date(now.getFullYear(), now.getMonth(), 1);
+                const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                startDate = first.toISOString().split('T')[0];
+                endDate = last.toISOString().split('T')[0];
               }
+
+              // Always pass start/end since backend requires startDate
+              this.eventos = await this.agendaService.listGlobalEventos(startDate as string, endDate as string);
             } catch (err) {
-              console.warn('Erro ao obter agenda global com intervalo, tentando sem intervalo', err);
-              this.eventos = await this.agendaService.listGlobalEventos();
+              console.warn('Erro ao obter agenda global com intervalo, tentando com intervalo padrao', err);
+              // fallback: try with current month range
+              const now2 = new Date();
+              const first2 = new Date(now2.getFullYear(), now2.getMonth(), 1);
+              const last2 = new Date(now2.getFullYear(), now2.getMonth() + 1, 0);
+              const startDate2 = first2.toISOString().split('T')[0];
+              const endDate2 = last2.toISOString().split('T')[0];
+              this.eventos = await this.agendaService.listGlobalEventos(startDate2, endDate2);
             }
           } else {
             this.eventos = await this.agendaService.listEventos();
@@ -393,6 +408,7 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
           clientName: data.clientName || null
         });
         this.ui.showToast('Evento criado com sucesso', 'success');
+        try { this.agendaModal?.close(); } catch (_) {}
       } else if (data.mode === 'edit') {
         if (!this.currentEditingItem) return;
         await this.agendaService.updateEvento(this.currentEditingItem.referenceId, {
@@ -404,6 +420,7 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
           clientName: data.clientName || null
         });
         this.ui.showToast('Evento atualizado com sucesso', 'success');
+        try { this.agendaModal?.close(); } catch (_) {}
       } else if (data.mode === 'reschedule') {
         if (!this.currentEditingItem) return;
         const visitId = this.currentEditingItem.sourceVisitId || this.currentEditingItem.referenceId;
@@ -412,6 +429,7 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
           reason: data.reason || null
         });
         this.ui.showToast('Visita reagendada com sucesso', 'success');
+        try { this.agendaModal?.close(); } catch (_) {}
       }
       console.log('Recarregando eventos após operação...');
       await this.loadEventos();

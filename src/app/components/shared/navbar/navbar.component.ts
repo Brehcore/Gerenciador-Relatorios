@@ -58,6 +58,18 @@ import { LegacyService } from '../../../services/legacy.service';
             <span class="nav-text">Documentos</span>
           </a>
         </li>
+        <li *ngIf="isUser">
+          <a href="#" (click)="navigate('cadastros', $event)" data-nav="cadastros" aria-label="Cadastros">
+            <!-- user add / register icon -->
+            <svg class="nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M6 20c0-3 4-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M19 8v6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M22 11h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span class="nav-text">Cadastros</span>
+          </a>
+        </li>
         <li class="admin-only" *ngIf="isAdmin">
           <a href="#" (click)="navigate('admin', $event)" data-nav="admin" aria-label="Administrador">
             <!-- gear with 6 teeth (simplified) -->
@@ -97,6 +109,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   role = '--';
   initials = '--';
   isAdmin = false;
+  isUser = false;
   userMenuOpen = false;
   navOpen = false;
   
@@ -113,6 +126,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
       this.role = me.especialidade || me.role || '';
       this.initials = (me.name || '?').split(/\s+/).slice(0,2).map((p:any)=>p[0]?.toUpperCase()||'').join('');
       this.isAdmin = String(me.role || '').toUpperCase() === 'ADMIN';
+      this.isUser = String(me.role || '').toUpperCase() === 'USER';
     } else {
       const r = this.legacy.getUserRole() || localStorage.getItem('userRole') || '';
       this.role = r || '';
@@ -120,6 +134,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
       this.name = candidate || '--';
       this.initials = (this.name || '?').split(/\s+/).slice(0,2).map((p:any)=>p[0]?.toUpperCase()||'').join('');
       this.isAdmin = String(r).toUpperCase() === 'ADMIN';
+      this.isUser = String(r).toUpperCase() === 'USER';
     }
   }
 

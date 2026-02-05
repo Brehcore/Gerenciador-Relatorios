@@ -20,15 +20,9 @@ export class LoginComponent implements OnInit {
   loading = false;
   errorMessage = '';
   
-  // Password reset modal
-  showResetPasswordModal = false;
-  resetPasswordForm = {
-    newPassword: '',
-    confirmPassword: ''
-  };
-  resetPasswordLoading = false;
-  resetPasswordError = '';
-  resetPasswordToken = '';
+  // Modal de reset obrigatório
+  showPasswordResetRequiredModal = false;
+  userEmailForReset = '';
 
   constructor(
     private auth: AuthService,
@@ -121,11 +115,9 @@ export class LoginComponent implements OnInit {
 
       // Verificar se passwordResetRequired é true
       if (data && data.passwordResetRequired === true) {
-        this.resetPasswordToken = data.token;
-        this.showResetPasswordModal = true;
-        this.passwordResetService.setPasswordResetRequired(true);
-        // Navegar para o dashboard, mas com o modal de reset exibindo
-        try { this.router.navigate(['/group']); } catch(_) { window.location.href = '/'; }
+        this.userEmailForReset = data.email || this.email;
+        this.showPasswordResetRequiredModal = true;
+        // Não navegar ainda - aguardar ação do usuário no modal
         return;
       }
 
@@ -153,70 +145,15 @@ export class LoginComponent implements OnInit {
     }
   }
 
-  async submitResetPassword() {
-    // Validar senhas
-    if (!this.resetPasswordForm.newPassword || !this.resetPasswordForm.confirmPassword) {
-      this.resetPasswordError = 'Nova senha e confirmação são obrigatórias';
-      return;
-    }
-
-    if (this.resetPasswordForm.newPassword.length < 8) {
-      this.resetPasswordError = 'A senha deve ter no mínimo 8 caracteres';
-      return;
-    }
-
-    if (this.resetPasswordForm.newPassword !== this.resetPasswordForm.confirmPassword) {
-      this.resetPasswordError = 'As senhas não correspondem';
-      return;
-    }
-
-    this.resetPasswordLoading = true;
-    this.resetPasswordError = '';
-
-    try {
-      // Usar o token JWT que foi obtido no login
-      const token = localStorage.getItem('jwtToken');
-      if (!token) {
-        throw new Error('Token não encontrado. Por favor, faça login novamente.');
-      }
-
-      // Fazer requisição PUT para /users/me/change-password
-      const response = await fetch(`${this.legacy.apiBaseUrl}/users/me/change-password`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          newPassword: this.resetPasswordForm.newPassword
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Erro ao alterar senha (status ${response.status})`);
-      }
-
-      this.ui.showToast('Senha alterada com sucesso!', 'success');
-      
-      // Limpar modal e formulário
-      this.showResetPasswordModal = false;
-      this.passwordResetService.setPasswordResetRequired(false);
-      this.resetPasswordForm = { newPassword: '', confirmPassword: '' };
-      this.resetPasswordToken = '';
-
-      // Usuário pode agora navegar normalmente
-    } catch (error: any) {
-      this.resetPasswordError = error?.message || 'Erro ao alterar a senha. Tente novamente.';
-      this.ui.showToast(this.resetPasswordError, 'error');
-    } finally {
-      this.resetPasswordLoading = false;
-    }
+  closePasswordResetRequiredModal() {
+    this.showPasswordResetRequiredModal = false;
+    // Logout do usuário
+    this.auth.logout();
   }
 
-  closeResetPasswordModal() {
-    // Não permitir fechar o modal sem mudar a senha - apenas desabilitar visualmente se quiser
-    // Para segurança, não deixamos cancelar
-    this.resetPasswordError = 'Você deve alterar sua senha para continuar.';
+  continueToPasswordReset() {
+    // Fechar modal e redirecionar para página de reset obrigatório
+    this.showPasswordResetRequiredModal = false;
+    try { this.router.navigate(['/reset-senha-obrigatoria']); } catch(_) { window.location.href = '/reset-senha-obrigatoria'; }
   }
 }

@@ -3,14 +3,16 @@
     <h2>Agenda</h2>
     <div class="header-actions">
       <div class="filter-responsible">
+        <label for="filterResponsible" class="sr-only">Filtrar por responsável</label>
         <div class="search-box">
           <span class="search-icon" aria-hidden="true">🔎</span>
-          <input type="text" placeholder="Filtrar por responsável" [(ngModel)]="filterResponsibleInput" class="form-control search-input" aria-label="Filtrar por responsável" />
+          <input id="filterResponsible" type="text" placeholder="Filtrar por responsável" [(ngModel)]="filterResponsibleInput" class="form-control search-input" title="Digite o nome do responsável para filtrar" />
         </div>
-        <button type="button" class="btn-filter" (click)="applyResponsibleFilter()" [disabled]="!filterResponsibleInput">Filtrar</button>
-        <button type="button" class="btn-clear" (click)="clearResponsibleFilter()" [disabled]="!filterResponsibleInput">Limpar</button>
+        <button type="button" class="btn-filter" (click)="applyResponsibleFilter()" [disabled]="!filterResponsibleInput" title="Aplicar filtro">Filtrar</button>
+        <button type="button" class="btn-clear" (click)="clearResponsibleFilter()" [disabled]="!filterResponsibleInput" title="Limpar filtro">Limpar</button>
       </div>
-  <div class="view-tabs" *ngIf="!isAdmin">
+      
+      <div class="view-tabs" *ngIf="!isAdmin">
         <button 
           type="button" 
           class="tab-btn" 
@@ -26,14 +28,18 @@
           📋 Listagem
         </button>
       </div>
+      
       <!-- Switch: Agenda Global / Pessoal -->
-      <div class="global-switch" *ngIf="!isAdmin" style="display:flex;align-items:center;gap:8px;margin-left:12px;">
-        <label style="font-weight:600;color:#374151;">Agenda global</label>
-        <label class="switch">
-          <input type="checkbox" [(ngModel)]="showGlobalAgenda" (change)="loadEventos()" />
-          <span class="slider"></span>
+      <div class="global-switch" *ngIf="!isAdmin">
+        <label for="globalAgendaSwitch" style="font-weight:600;color:#374151;display:flex;align-items:center;gap:8px;margin-left:0;cursor:pointer;">
+          <span>Agenda global</span>
+          <label class="switch">
+            <input id="globalAgendaSwitch" type="checkbox" [(ngModel)]="showGlobalAgenda" (change)="loadEventos()" title="Alternar entre agenda global e pessoal" />
+            <span class="slider" aria-hidden="true"></span>
+          </label>
         </label>
       </div>
+      
       <button type="button" class="btn-primary" (click)="createNew()">+ Novo Evento</button>
       <button type="button" class="btn-secondary" (click)="loadEventos()">🔄 Atualizar</button>
     </div>

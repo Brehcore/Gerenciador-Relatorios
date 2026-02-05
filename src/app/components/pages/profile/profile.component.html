@@ -7,6 +7,14 @@
             <h2 class="profile-name">{{ profile?.name || '-' }}</h2>
             <div class="profile-role">{{ profile?.role === 'ADMIN' ? 'Administrador' : 'Usuário' }}</div>
           </div>
+          <div class="profile-actions-buttons">
+            <button type="button" class="btn-change-password" (click)="openChangePasswordModal()" title="Alterar senha">
+              🔐 Alterar Senha
+            </button>
+            <button type="button" class="btn-change-email" (click)="openChangeEmailModal()" title="Alterar email">
+              📧 Alterar Email
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -51,6 +59,160 @@
             <a class="manage-certificate" routerLink="/certificado-digital">{{ hasCertificate && certificateValidity ? ('Validade: ' + certificateValidity) : 'Sem certificado digital' }}</a>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Alterar Senha -->
+  <div class="modal-backdrop" *ngIf="showChangePasswordModal" (click)="closeChangePasswordModal()"></div>
+  <div class="modal" *ngIf="showChangePasswordModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Alterar Senha</h3>
+        <button type="button" class="modal-close" (click)="closeChangePasswordModal()" title="Fechar modal">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="currentPasswordForPassword">Sua Senha Atual *</label>
+          <input 
+            id="currentPasswordForPassword"
+            type="password" 
+            [(ngModel)]="currentPasswordForPassword" 
+            placeholder="Confirme com sua senha atual"
+            maxlength="100"
+            title="Digite sua senha atual para confirmar" />
+          <small *ngIf="currentPasswordForPassword.length > 0" class="form-hint">
+            Necessário confirmar com sua senha atual
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="newPassword">Nova Senha *</label>
+          <input 
+            id="newPassword"
+            type="password" 
+            [(ngModel)]="newPassword" 
+            placeholder="Mínimo 8 caracteres"
+            maxlength="100"
+            title="Digite a nova senha (mínimo 8 caracteres)" />
+          <small *ngIf="newPassword.length > 0 && newPassword.length < 8" class="form-hint error">
+            Mínimo 8 caracteres ({{ newPassword.length }}/8)
+          </small>
+          <small *ngIf="newPassword.length >= 8" class="form-hint success">
+            Comprimento de senha válido ✓
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">Confirmar Senha *</label>
+          <input 
+            id="confirmPassword"
+            type="password" 
+            [(ngModel)]="confirmPassword" 
+            placeholder="Repita a senha"
+            maxlength="100"
+            title="Repita a nova senha" />
+          <small *ngIf="confirmPassword && newPassword !== confirmPassword" class="form-hint error">
+            As senhas não conferem
+          </small>
+          <small *ngIf="confirmPassword && newPassword === confirmPassword && newPassword.length >= 8" class="form-hint success">
+            Senhas coincidem ✓
+          </small>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button 
+          type="button" 
+          class="btn-secondary" 
+          (click)="closeChangePasswordModal()">
+          Cancelar
+        </button>
+        <button 
+          type="button" 
+          class="btn-primary"
+          (click)="submitChangePassword()"
+          [disabled]="changePasswordSubmitting || !newPassword || !confirmPassword || !currentPasswordForPassword || newPassword !== confirmPassword || newPassword.length < 8">
+          {{ changePasswordSubmitting ? '⏳ Alterando...' : '✓ Alterar Senha' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Alterar Email -->
+  <div class="modal-backdrop" *ngIf="showChangeEmailModal" (click)="closeChangeEmailModal()"></div>
+  <div class="modal" *ngIf="showChangeEmailModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Alterar Email</h3>
+        <button type="button" class="modal-close" (click)="closeChangeEmailModal()" title="Fechar modal">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="newEmail">Novo Email *</label>
+          <input 
+            id="newEmail"
+            type="email" 
+            [(ngModel)]="newEmail" 
+            placeholder="seu.novo.email@exemplo.com"
+            maxlength="100"
+            title="Digite o seu novo email" />
+          <small *ngIf="newEmail.length > 0 && !isValidEmail(newEmail)" class="form-hint error">
+            Email inválido
+          </small>
+          <small *ngIf="newEmail.length > 0 && isValidEmail(newEmail)" class="form-hint success">
+            Email válido ✓
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmEmail">Confirmar Email *</label>
+          <input 
+            id="confirmEmail"
+            type="email" 
+            [(ngModel)]="confirmEmail" 
+            placeholder="Repita o email"
+            maxlength="100"
+            title="Repita o novo email" />
+          <small *ngIf="confirmEmail && newEmail !== confirmEmail" class="form-hint error">
+            Os emails não conferem
+          </small>
+          <small *ngIf="confirmEmail && newEmail === confirmEmail && isValidEmail(newEmail)" class="form-hint success">
+            Emails coincidem ✓
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="emailCurrentPassword">Sua Senha Atual *</label>
+          <input 
+            id="emailCurrentPassword"
+            type="password" 
+            [(ngModel)]="currentPassword" 
+            placeholder="Confirme com sua senha"
+            maxlength="100"
+            title="Digite sua senha atual para confirmar" />
+          <small *ngIf="currentPassword.length > 0" class="form-hint">
+            Necessário confirmar com sua senha atual
+          </small>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button 
+          type="button" 
+          class="btn-secondary" 
+          (click)="closeChangeEmailModal()">
+          Cancelar
+        </button>
+        <button 
+          type="button" 
+          class="btn-primary"
+          (click)="submitChangeEmail()"
+          [disabled]="changeEmailSubmitting || !newEmail || !confirmEmail || !currentPassword || newEmail !== confirmEmail || !isValidEmail(newEmail)">
+          {{ changeEmailSubmitting ? '⏳ Alterando...' : '✓ Alterar Email' }}
+        </button>
       </div>
     </div>
   </div>

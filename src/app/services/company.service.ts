@@ -80,6 +80,98 @@ export class CompanyService {
   }
 
   /**
+   * Cria uma nova empresa via POST /companies
+   */
+  async create(payload: { name: string; cnpj: string; units?: any[]; sectors?: any[] }): Promise<any> {
+    try {
+      const url = `${this.legacy.apiBaseUrl}/companies`;
+      const body = {
+        name: payload.name,
+        cnpj: payload.cnpj,
+        units: payload.units || [],
+        sectors: payload.sectors || []
+      };
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...this.legacy.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!resp.ok) {
+        let err = `Status ${resp.status}: ${resp.statusText}`;
+        try {
+          const ct = resp.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const b = await resp.json();
+            if (b.message) err = b.message;
+            else err += ` | ${JSON.stringify(b)}`;
+          } else {
+            const t = await resp.text();
+            err += ` | ${t}`;
+          }
+        } catch (_) {}
+        const e: any = new Error(err);
+        e.status = resp.status;
+        throw e;
+      }
+
+      return await resp.json();
+    } catch (err) {
+      console.error('[CompanyService] Erro ao criar empresa:', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Atualiza uma empresa existente via PUT /companies/{id}
+   */
+  async update(id: number, payload: { name: string; cnpj: string; units?: any[]; sectors?: any[] }): Promise<any> {
+    try {
+      const url = `${this.legacy.apiBaseUrl}/companies/${id}`;
+      const body = {
+        name: payload.name,
+        cnpj: payload.cnpj,
+        units: payload.units || [],
+        sectors: payload.sectors || []
+      };
+      const resp = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          ...this.legacy.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!resp.ok) {
+        let err = `Status ${resp.status}: ${resp.statusText}`;
+        try {
+          const ct = resp.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const b = await resp.json();
+            if (b.message) err = b.message;
+            else err += ` | ${JSON.stringify(b)}`;
+          } else {
+            const t = await resp.text();
+            err += ` | ${t}`;
+          }
+        } catch (_) {}
+        const e: any = new Error(err);
+        e.status = resp.status;
+        throw e;
+      }
+
+      return await resp.json();
+    } catch (err) {
+      console.error('[CompanyService] Erro ao atualizar empresa:', err);
+      throw err;
+    }
+  }
+
+  /**
    * Parse manual de JSON com referências circulares
    * Remove "company" dos objetos aninhados para quebrar o loop
    */

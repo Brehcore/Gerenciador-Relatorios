@@ -1,0 +1,72 @@
+<div class="reset-container">
+  <div class="reset-card">
+    <div class="reset-header">
+      <div class="reset-icon">🔐</div>
+      <h1>Definir Senha</h1>
+      <p class="reset-subtitle">Sua primeira vez acessando a plataforma</p>
+    </div>
+
+    <div class="reset-content">
+      <div class="user-info">
+        <p>Email: <strong>{{ userEmail }}</strong></p>
+      </div>
+
+      <p class="reset-description">
+        Por segurança, é necessário definir uma nova senha antes de continuar. Esta senha será solicitada em futuros logins.
+      </p>
+
+      <form (ngSubmit)="submitResetPassword()" class="reset-form">
+        <div class="form-group">
+          <label for="newPassword">Nova Senha *</label>
+          <input 
+            id="newPassword"
+            type="password" 
+            [(ngModel)]="newPassword"
+            name="newPassword"
+            placeholder="Mínimo 8 caracteres"
+            maxlength="100"
+            [disabled]="submitting"
+            title="Digite uma nova senha (mínimo 8 caracteres)" />
+          <small *ngIf="newPassword.length > 0 && newPassword.length < 8" class="form-hint error">
+            Mínimo 8 caracteres ({{ newPassword.length }}/8)
+          </small>
+          <small *ngIf="newPassword.length >= 8" class="form-hint success">
+            Comprimento de senha válido ✓
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">Confirmar Senha *</label>
+          <input 
+            id="confirmPassword"
+            type="password" 
+            [(ngModel)]="confirmPassword"
+            name="confirmPassword"
+            placeholder="Repita a senha"
+            maxlength="100"
+            [disabled]="submitting"
+            title="Repita a nova senha" />
+          <small *ngIf="confirmPassword && newPassword !== confirmPassword" class="form-hint error">
+            As senhas não conferem
+          </small>
+          <small *ngIf="confirmPassword && newPassword === confirmPassword && newPassword.length >= 8" class="form-hint success">
+            Senhas coincidem ✓
+          </small>
+        </div>
+
+        <button 
+          type="submit"
+          class="btn-submit"
+          [disabled]="submitting || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8">
+          {{ submitting ? '⏳ Definindo senha...' : '✓ Definir Senha' }}
+        </button>
+      </form>
+
+      <div class="reset-footer">
+        <button type="button" class="btn-logout" (click)="logout()">
+          Sair da Conta
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

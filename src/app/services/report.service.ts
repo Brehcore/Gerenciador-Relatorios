@@ -78,6 +78,20 @@ export class ReportService {
         } catch (parseErr) {
           console.warn('[ReportService] ⚠️ Não foi possível fazer parse da resposta de erro', parseErr);
         }
+        // Detectar falha na geração de PDF (rollback no backend)
+        try {
+          const ct = resp.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const errBody = await resp.json();
+            const msg = (errBody.message || errBody.error || '').toString();
+            if (/pdf|geração|gerar|arquivo|file/i.test(msg)) {
+              const e: any = new Error('O relatório não foi salvo devido a uma falha na geração do arquivo');
+              e.reportGenerationFailed = true;
+              throw e;
+            }
+          }
+        } catch (_) { /* ignore parsing errors here */ }
+
         throw new Error(errorDetails);
       }
       
@@ -324,6 +338,21 @@ export class ReportService {
       if (!resp.ok) {
         let err = `Status ${resp.status}: ${resp.statusText}`;
         try { const ct = resp.headers.get('content-type') || ''; if (ct.includes('application/json')) { const b = await resp.json(); err += ` | ${JSON.stringify(b)}`; } } catch(_){}
+        // Detect PDF generation / report generation failure
+        try {
+          const ct = resp.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const b = await resp.json();
+            const m = (b.message || b.error || '').toString();
+            if (/pdf|geração|gerar|arquivo|file/i.test(m)) {
+              const e: any = new Error('O relatório não foi salvo devido a uma falha na geração do arquivo');
+              e.reportGenerationFailed = true;
+              throw e;
+            }
+            err += ` | ${JSON.stringify(b)}`;
+          }
+        } catch (_) { /* ignore */ }
+
         throw new Error(err);
       }
       return await resp.json();

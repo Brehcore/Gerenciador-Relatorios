@@ -37,16 +37,284 @@
 .info-label { font-size: 12px; color: #777; margin-bottom: 6px; }
 .info-value { font-size: 1rem; color: var(--verde-escuro); font-weight: 600; }
 
+/* Botão de Alterar Senha */
+.btn-change-password {
+  background: linear-gradient(135deg, #34a853 0%, #2d8e47 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(52, 168, 83, 0.2);
+}
+
+.btn-change-password:hover {
+  background: linear-gradient(135deg, #2d8e47 0%, #1e6b33 100%);
+  box-shadow: 0 4px 8px rgba(52, 168, 83, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-change-password:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(52, 168, 83, 0.2);
+}
+
+/* Botão de Alterar Email */
+.btn-change-email {
+  background: linear-gradient(135deg, #1f73b7 0%, #1558a0 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(31, 115, 183, 0.2);
+}
+
+.btn-change-email:hover {
+  background: linear-gradient(135deg, #1558a0 0%, #0f3f7f 100%);
+  box-shadow: 0 4px 8px rgba(31, 115, 183, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-change-email:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(31, 115, 183, 0.2);
+}
+
+.profile-actions-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Modal de Alterar Senha */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 420px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--verde-escuro);
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: var(--verde-escuro);
+  font-size: 0.95rem;
+}
+
+.form-group input {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #34a853;
+  box-shadow: 0 0 0 3px rgba(52, 168, 83, 0.1);
+  background: #f9fff8;
+}
+
+.form-group input:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.form-hint {
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.form-hint.error {
+  color: #d93026;
+}
+
+.form-hint.success {
+  color: #34a853;
+  font-weight: 500;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+  justify-content: flex-end;
+}
+
+.btn-secondary {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: #f5f5f5;
+  color: #333;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #e8e8e8;
+  border-color: #bbb;
+}
+
+.btn-secondary:active {
+  background: #ddd;
+}
+
+.btn-primary {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #34a853 0%, #2d8e47 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2d8e47 0%, #1e6b33 100%);
+  box-shadow: 0 4px 8px rgba(52, 168, 83, 0.3);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* Responsividade */
 @media (max-width: 880px) {
   .info-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
 @media (max-width: 560px) {
   .profile-page { padding: 12px; }
   .profile-card { padding: 12px; }
-  .meta-top { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .meta-top { 
+    flex-direction: column; 
+    align-items: flex-start; 
+    gap: 8px; 
+  }
+  .profile-actions-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btn-change-password,
+  .btn-change-email {
+    width: 100%;
+  }
   .info-grid { grid-template-columns: 1fr; }
   .avatar { width: 80px; height: 80px; font-size: 22px; }
+  
+  .modal {
+    width: 95%;
+    max-width: 100%;
+  }
 }
 
 /* estilos mínimos para profile */
