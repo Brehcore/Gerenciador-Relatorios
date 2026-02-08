@@ -22,30 +22,29 @@ export class AdminGuard implements CanActivate {
         return false;
       }
 
-      // Extrair role diretamente do JWT (fonte verdadeira)
+      // COPIADO DO DASHBOARD QUE FUNCIONA!
+      // Extrair role do JWT
       const payload = this.legacy.decodeJwt(token);
-      console.warn(`%c[AdminGuard] JWT payload roles: ${JSON.stringify(payload?.roles)}`, 'color:blue');
+      let roleStr = '';
       
-      let hasAdminRole = false;
-      
-      // Verificar se tem ROLE_ADMIN no array roles
-      if (Array.isArray(payload?.roles)) {
-        hasAdminRole = payload.roles.some((r: string) => 
-          String(r).toUpperCase() === 'ADMIN' || String(r).toUpperCase() === 'ROLE_ADMIN'
-        );
+      // Tentar extrair de payload.role primeiro
+      if (payload?.role) {
+        roleStr = String(payload.role);
+      }
+      // Senão, tentar extrair do array roles
+      else if (Array.isArray(payload?.roles) && payload.roles.length > 0) {
+        roleStr = String(payload.roles[0]);
       }
       
-      // Fallback: verificar payload.role direto
-      if (!hasAdminRole && payload?.role) {
-        const role = String(payload.role).toUpperCase();
-        hasAdminRole = role === 'ADMIN' || role === 'ROLE_ADMIN';
-      }
+      console.warn(`%c[AdminGuard] roleStr: ${roleStr}`, 'color:blue');
       
-      console.warn(`%c[AdminGuard] hasAdminRole: ${hasAdminRole}`, 'color:blue;font-weight:bold');
+      // USAR .includes() COMO NO DASHBOARD (FUNCIONA!)
+      const isAdmin = String(roleStr || '').toUpperCase().includes('ADMIN');
+      
+      console.warn(`%c[AdminGuard] isAdmin (includes ADMIN): ${isAdmin}`, 'color:blue;font-weight:bold');
 
-      if (hasAdminRole) {
+      if (isAdmin) {
         console.warn('%c[AdminGuard] ✅ ACESSO PERMITIDO', 'color:green;font-weight:bold');
-        // Também salva no localStorage para próximas verificações
         try {
           localStorage.setItem('userRole', 'ROLE_ADMIN');
         } catch (_) {}
