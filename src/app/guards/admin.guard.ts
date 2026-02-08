@@ -68,8 +68,16 @@ export class AdminGuard implements CanActivate {
         return false;
       }
 
-      // 2. Decodificar JWT
-      const payload = this.legacy.decodeJwt(token);
+      // 2. Decodificar JWT - SEM SERVICE
+      let payload: any = null;
+      try {
+        const base64Payload = token.split('.')[1];
+        payload = JSON.parse(atob(base64Payload));
+      } catch (decodeErr) {
+        this.ui.showToast('❌ Erro ao decodificar token.', 'error', 4000);
+        this.router.navigate(['/login']);
+        return false;
+      }
       
       // 3. Se payload for null/undefined, retornar falso
       if (!payload) {
