@@ -33,22 +33,16 @@ export const requirePasswordResetGuard: CanActivateFn = (route: ActivatedRouteSn
 };
 
 export const blockUntilPasswordResetGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
-  window.alert('🚨 BLOCK PASSWORD RESET GUARD');
-  console.error('🚨 BLOCK UNTIL PASSWORD RESET GUARD EXECUTADO');
   const authService = inject(AuthService);
   const router = inject(Router);
   const uiService = inject(UiService);
 
   // Se precisa resetar a senha, bloqueia acesso a essa rota
-  if (authService.isPasswordResetRequired()) {
-    window.alert('🚨 PASSWORD RESET REQUIRED');
-    console.error('🚨 PASSWORD RESET REQUIRED, BLOQUEANDO');
+  if (authService.isPasswordResetRequired() === true) {
     uiService.showToast('⚠️ Você precisa resetar sua senha antes de acessar esta página.', 'warning', 4000);
     router.navigate(['/reset-senha-obrigatoria']);
     return false;
   }
 
-  window.alert('🚨 Password reset OK, permitindo');
-  console.error('🚨 Password reset OK, permitindo');
   return true;
 };

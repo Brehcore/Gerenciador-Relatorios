@@ -32,7 +32,7 @@ export const routes: Routes = [
 	{ path: 'profile', component: ProfileComponent, canActivate: [blockUntilPasswordResetGuard] },
 	{ path: 'certificado-digital', component: CertificateComponent, canActivate: [blockUntilPasswordResetGuard] },
 	// rotas forms/change-password removidas temporariamente até migração completa
-	{ path: 'admin', component: AdminComponent, canActivate: [AdminGuard, blockUntilPasswordResetGuard] },
+	{ path: 'admin', component: AdminComponent, canActivate: [blockUntilPasswordResetGuard, AdminGuard] },
 	{ path: 'cadastros', component: CadastrosComponent, canActivate: [UserGuard, blockUntilPasswordResetGuard] },
 	{ path: 'aep', component: AepComponent, canActivate: [blockUntilPasswordResetGuard] },
 	{ path: 'checklist', component: ChecklistComponent, canActivate: [blockUntilPasswordResetGuard] },

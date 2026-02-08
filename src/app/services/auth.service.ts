@@ -52,7 +52,11 @@ export class AuthService {
   }
 
   isPasswordResetRequired(): boolean {
-    return this.passwordResetRequired;
+    // Comparação estrita: apenas true é true
+    if (this.passwordResetRequired === true) return true;
+    // Fallback: ver localStorage
+    const stored = localStorage.getItem('passwordResetRequired');
+    return stored ? JSON.parse(stored) === true : false;
   }
 
   setPasswordResetRequired(value: boolean) {
