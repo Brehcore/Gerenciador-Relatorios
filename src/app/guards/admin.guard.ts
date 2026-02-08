@@ -13,9 +13,11 @@ export class AdminGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): boolean {
+    console.error('🚨 ADMIN GUARD EXECUTADO');
     try {
       // 1. Verificar se tem token
       const token = localStorage.getItem('jwtToken');
+      console.error('🚨 Token:', token ? 'SIM' : 'NÃO');
       if (!token) {
         this.ui.showToast('❌ Token não encontrado. Faça login novamente.', 'error', 4000);
         this.router.navigate(['/login']);
