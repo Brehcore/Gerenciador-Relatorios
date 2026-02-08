@@ -14,50 +14,73 @@ export class AdminGuard implements CanActivate {
     state: RouterStateSnapshot
   ): boolean {
     try {
+      // 1. Verificar se tem token
       const token = localStorage.getItem('jwtToken');
       if (!token) {
-        console.warn('%c[AdminGuard] Sem token!', 'color:red;font-weight:bold');
-        this.ui.showToast('Token expirado. Faça login novamente.', 'error', 4000);
+        this.ui.showToast('❌ Token não encontrado. Faça login novamente.', 'error', 4000);
         this.router.navigate(['/login']);
         return false;
       }
 
-      // COPIADO DO DASHBOARD QUE FUNCIONA!
-      // Extrair role do JWT
+      // 2. Decodificar JWT
       const payload = this.legacy.decodeJwt(token);
-      let roleStr = '';
       
-      // Tentar extrair de payload.role primeiro
-      if (payload?.role) {
-        roleStr = String(payload.role);
+      // 3. Se payload for null/undefined, retornar falso
+      if (!payload) {
+        this.ui.showToast('❌ Token inválido (payload null). Faça login novamente.', 'error', 4000);
+        this.router.navigate(['/login']);
+        return false;
       }
-      // Senão, tentar extrair do array roles
-      else if (Array.isArray(payload?.roles) && payload.roles.length > 0) {
-        roleStr = String(payload.roles[0]);
+
+      // 4. Extrair role - tentar múltiplas formas
+      let roleValue: any = null;
+      let foundInField = 'nenhum';
+      
+      // Tentar payload.roles (array)
+      if (Array.isArray(payload.roles) && payload.roles.length > 0) {
+        roleValue = payload.roles[0];
+        foundInField = 'roles[0]';
       }
+      // Tentar payload.role
+      else if (payload.role) {
+        roleValue = payload.role;
+        foundInField = 'role';
+      }
+      // Tentar payload.authorities (array)
+      else if (Array.isArray(payload.authorities) && payload.authorities.length > 0) {
+        roleValue = payload.authorities[0];
+        foundInField = 'authorities[0]';
+      }
+
+      // 5. Se não encontrou role, negar acesso
+      if (!roleValue) {
+        this.ui.showToast(`⚠️ Role não encontrado em payload. Campos: roles=${payload.roles}, role=${payload.role}, authorities=${payload.authorities}`, 'warning', 5000);
+        this.router.navigate(['/group']);
+        return false;
+      }
+
+      // 6. Converter para string e verificar
+      const roleStr = String(roleValue);
+      const roleUpper = roleStr.toUpperCase();
       
-      console.warn(`%c[AdminGuard] roleStr: ${roleStr}`, 'color:blue');
+      // DEBUG: mostrar qual role foi encontrado
+      this.ui.showToast(`🔍 Role encontrado em ${foundInField}: "${roleStr}" → "${roleUpper}"`, 'info', 3000);
       
-      // USAR .includes() COMO NO DASHBOARD (FUNCIONA!)
-      const isAdmin = String(roleStr || '').toUpperCase().includes('ADMIN');
-      
-      console.warn(`%c[AdminGuard] isAdmin (includes ADMIN): ${isAdmin}`, 'color:blue;font-weight:bold');
+      // 7. Verificar se contém 'ADMIN'
+      const isAdmin = roleUpper.includes('ADMIN');
 
       if (isAdmin) {
-        console.warn('%c[AdminGuard] ✅ ACESSO PERMITIDO', 'color:green;font-weight:bold');
-        try {
-          localStorage.setItem('userRole', 'ROLE_ADMIN');
-        } catch (_) {}
+        this.ui.showToast(`✅ Acesso ADMIN garantido!`, 'success', 2000);
         return true;
       }
 
-      console.warn('%c[AdminGuard] ❌ ACESSO NEGADO', 'color:red;font-weight:bold');
-      this.ui.showToast('Acesso negado. Apenas administradores podem acessar.', 'error', 4000);
+      // 8. Negar acesso
+      this.ui.showToast(`❌ Role "${roleUpper}" não contém 'ADMIN'. Acesso negado.`, 'warning', 4000);
       this.router.navigate(['/group']);
       return false;
+
     } catch (err) {
-      console.error('%c[AdminGuard] ❌ ERRO:', 'color:red;font-weight:bold', err);
-      this.ui.showToast('Erro ao verificar permissões.', 'error', 3000);
+      this.ui.showToast(`❌ Erro inesperado: ${err}`, 'error', 4000);
       this.router.navigate(['/group']);
       return false;
     }
