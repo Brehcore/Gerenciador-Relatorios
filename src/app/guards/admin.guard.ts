@@ -13,7 +13,8 @@ export class AdminGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): boolean {
-    console.error('🚨 ADMIN GUARD EXECUTADO');
+    const timestamp = new Date().toISOString();
+    console.error(`🚨 ADMIN GUARD EXECUTADO [${timestamp}]`);
     try {
       // 1. Verificar se tem token
       const token = localStorage.getItem('jwtToken');
