@@ -100,6 +100,9 @@
   font-weight: 500;
   color: #666;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .tab-btn:hover {
@@ -122,6 +125,9 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(27, 110, 246, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-primary:hover {
@@ -138,6 +144,9 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-secondary:hover {
@@ -213,12 +222,22 @@
 
 :deep(.fc .fc-event) {
   border: none !important;
-  padding: 2px 4px !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+}
+
+:deep(.fc .fc-event-main-frame) {
+  max-width: 100% !important;
+  overflow: visible !important;
 }
 
 :deep(.fc .fc-event-title) {
   font-weight: 600 !important;
-  font-size: 12px !important;
+  font-size: 10px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 /* Toolbar responsiva */
@@ -264,11 +283,72 @@
 
 :deep(.fc .fc-button) {
   padding: 8px 10px !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   min-width: 40px !important;
   height: 36px !important;
   white-space: nowrap !important;
 }
+:deep(.fc .fc-daygrid-day-number) {
+  font-size: 12px !important;
+}
+
+:deep(.fc .fc-event) {
+  font-size: 11px !important;
+}
+
+:deep(.fc .fc-event .fc-evt-title) {
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+}
+
+/* === Forçar empilhamento vertical de eventos e permitir que a célula do dia cresça ===
+   Objetivo: cada evento fica dentro da largura total da célula e a célula cresce verticalmente.
+   Os eventos aparecem como cards empilhados.
+*/
+:deep(.fc .fc-daygrid-day) {
+  height: auto !important;
+  min-height: 110px !important;
+  overflow: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+:deep(.fc .fc-daygrid-day-frame),
+:deep(.fc .fc-daygrid-day-events),
+:deep(.fc .fc-daygrid-event-harness) {
+  display: block !important;
+  width: 100% !important;
+  position: relative !important;
+  transform: none !important;
+  overflow: visible !important;
+}
+:deep(.fc .fc-daygrid-day-events) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  align-items: stretch !important;
+  padding: 3px 2px !important;
+  overflow: visible !important;
+}
+:deep(.fc .fc-daygrid-event-harness),
+:deep(.fc .fc-daygrid-block-event),
+:deep(.fc .fc-daygrid-event),
+:deep(.fc .fc-event) {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  white-space: normal !important;
+  overflow: visible !important;
+}
+:deep(.fc .fc-event-main) {
+  display: block !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+:deep(.fc .fc-event .fc-evt-sub, :deep(.fc .fc-event .fc-evt-sub-client)) {
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
 
 :deep(.fc .fc-toolbar-title) {
   font-size: 1.2rem !important;
@@ -305,6 +385,31 @@
 
 :deep(.fc .fc-daygrid-day) {
   min-width: 35px !important;
+  max-height: none !important;
+  overflow: visible !important;
+  clip-path: none !important;
+}
+
+:deep(.fc .fc-daygrid-day-content) {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Force event link/anchor strict containment */
+:deep(a.fc-event) {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  text-decoration: none !important;
+}
+
+:deep(.fc .fc-event) {
+  max-width: 100% !important;
+  overflow: visible !important;
+  clip-path: none !important;
 }
 
 :deep(.fc .fc-daygrid-day-number) {
@@ -330,9 +435,9 @@
   display: flex; 
   justify-content: space-between; 
   align-items: flex-start;
-  padding: 16px;
+  padding: 10px 12px;
   border-bottom: 1px solid #f0f0f0;
-  transition: background 0.2s ease;
+  transition: background 0.12s ease;
 }
 
 .agenda-item:hover {
@@ -340,34 +445,34 @@
 }
 
 .agenda-item.type-evento {
-  border-left: 4px solid #3b82f6;
+  border-left: 3px solid #3b82f6;
 }
 
 .agenda-item.type-visita {
-  border-left: 4px solid #10b981;
+  border-left: 3px solid #10b981;
 }
 
 .agenda-item.type-visita_reagendada {
-  border-left: 4px solid #f59e0b;
+  border-left: 3px solid #f59e0b;
 }
 
 .agenda-item .left { 
   flex: 1;
-  max-width: 70%;
+  max-width: 72%;
 }
 
 .agenda-item .title { 
   font-weight: 600;
-  font-size: 16px;
+  font-size: 14px;
   color: #0b3a80;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .agenda-item .meta { 
   color: #666; 
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -398,21 +503,244 @@
   font-weight: 600;
 }
 
-.shift-badge {
+/* Status badges and export modal */
+.status-chip {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 4px 8px;
   border-radius: 12px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
+.status-reagendado { background:#fef3c7; color:#92400e; }
+.status-a-confirmar { background:#fff7ed; color:#b45309; }
+.status-confirmado { background:#dbf6ff; color:#0369a1; }
+.status-cancelado { background:#f8fafc; color:#6b7280; text-decoration:line-through; }
+
+.export-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.export-modal {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  width: 320px;
+  box-shadow: 0 8px 32px rgba(2,6,23,0.2);
+}
+.export-modal h3 { margin: 0 0 12px 0; font-size: 1.05rem; }
+.export-fields { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.export-fields label { font-size:0.85rem; color:#374151; }
+.export-actions { display:flex; gap:8px; justify-content:flex-end; }
+
+.btn-export {
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #06b6d4;
+  color: white;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-export:hover { background:#0891b2 }
+.btn-export .icon-svg { filter: brightness(0) invert(1); }
+
+/* FullCalendar custom event styles - Card visual compacto */
+:deep(.fc .fc-event .fc-custom-event) { 
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  overflow: visible;
+  width: 100%;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(2, 6, 23, 0.06);
+  line-height: 1.2;
+  min-height: 28px;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+:deep(.fc .fc-event .fc-custom-event):hover {
+  box-shadow: 0 2px 4px rgba(2, 6, 23, 0.08);
+  border-color: #d1d5db;
+}
+:deep(.fc .fc-event .fc-evt-left) { 
+  flex: 0 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+:deep(.fc .fc-event .fc-evt-icon) { display: inline-block; width: 14px; text-align: center; flex-shrink: 0; }
+:deep(.fc .fc-event .fc-evt-icon-img) { 
+  width: 14px;
+  height: 14px;
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+:deep(.fc .fc-event .fc-evt-right) { 
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  gap: 1px;
+}
+:deep(.fc .fc-event .fc-evt-title) { 
+  font-weight: 600;
+  font-size: 10px;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  flex-shrink: 0;
+  line-height: 1.1;
+}
+:deep(.fc .fc-event .fc-evt-sub, .fc-evt-sub-client) { 
+  font-size: 9px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  flex-shrink: 0;
+  line-height: 1.1;
+}
+
+/* Force event container to respect cell width */
+:deep(.fc-daygrid-block-event) {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 2px 0 !important;
+  clip-path: none !important;
+}
+
+:deep(.fc-event-main) {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  clip-path: none !important;
+}
+
+:deep(.fc-custom-event) {
+  display: flex !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+  clip-path: none !important;
+}
+
+/* Status-specific visuals for calendar events (applied via classNames) - Card design */
+:deep(.fc .fc-event.confirmado) { 
+  background: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  color: #065f46 !important;
+}
+:deep(.fc .fc-event.confirmado .fc-evt-title) { color: #047857 !important; }
+:deep(.fc .fc-event.confirmado .fc-evt-sub, .fc-event.confirmado .fc-evt-sub-client) { color: #059669 !important; }
+
+:deep(.fc .fc-event.a_confirmar) { 
+  background: #fffbeb !important;
+  border-color: #f59e0b !important;
+  color: #92400e !important;
+}
+:deep(.fc .fc-event.a_confirmar .fc-evt-title) { color: #b45309 !important; }
+:deep(.fc .fc-event.a_confirmar .fc-evt-sub, .fc-event.a_confirmar .fc-evt-sub-client) { color: #d97706 !important; }
+
+:deep(.fc .fc-event.reagendado) { 
+  background: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+  color: #374151 !important;
+  opacity: 0.85 !important;
+}
+:deep(.fc .fc-event.reagendado .fc-evt-title) { color: #4b5563 !important; font-style: italic; }
+:deep(.fc .fc-event.reagendado .fc-evt-sub, .fc-event.reagendado .fc-evt-sub-client) { color: #6b7280 !important; }
+
+:deep(.fc .fc-event.cancelado) { 
+  background: #fef2f2 !important;
+  border-color: #ef4444 !important;
+  color: #7f1d1d !important;
+  opacity: 0.7 !important;
+}
+:deep(.fc .fc-event.cancelado .fc-evt-title) { 
+  color: #dc2626 !important;
+  text-decoration: line-through !important;
+}
+:deep(.fc .fc-event.cancelado .fc-evt-sub, .fc-event.cancelado .fc-evt-sub-client) { 
+  color: #f87171 !important;
+  text-decoration: line-through !important;
+}
+
+/* Ensure disabled/rescheduled events are not draggable visually */
+:deep(.fc .fc-event.reagendado) { cursor: default !important; }
+:deep(.fc .fc-event.cancelado) { cursor: default !important; }
+
+/* Additional clipping rules to prevent events overflowing into adjacent day cells */
+:deep(.fc .fc-daygrid-day) {
+  overflow: hidden !important;
+  position: relative !important;
+  clip-path: inset(0) !important;
+}
+:deep(.fc .fc-daygrid-day-frame), :deep(.fc .fc-daygrid-day-events), :deep(.fc .fc-daygrid-event-harness) {
+  overflow: visible !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  clip-path: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+:deep(.fc .fc-daygrid-event), :deep(.fc .fc-event) {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  clip-path: none !important;
+}
+:deep(.fc .fc-daygrid-event .fc-evt-right), :deep(.fc .fc-event .fc-evt-right) {
+  max-width: 100% !important;
+}
+:deep(.fc .fc-event .fc-evt-title), :deep(.fc .fc-event .fc-evt-sub), :deep(.fc .fc-event .fc-evt-sub-client) {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+
+.shift-badge {
+  display: none; /* ocultado em eventos compactos do calendário */
+  padding: 1px 4px;
+  border-radius: 8px;
+  font-size: 0.75rem;
   font-weight: 600;
   background: #f3f4f6;
   color: #374151;
-  margin: 0 4px;
+  margin: 0 2px;
 }
 
 .agenda-item .desc { 
-  margin-top: 8px; 
+  margin-top: 6px; 
   color: #666;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .agenda-item .log {
@@ -420,9 +748,12 @@
   padding: 6px 8px;
   background: #f5f5f5;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   color: #777;
 }
+
+.agenda-item .client-display { font-size: 13px; color:#b45309; margin-bottom:6px }
+.agenda-item .responsible { color:#374151; font-size:13px; margin-top:6px }
 
 .agenda-item .actions {
   display: flex;
@@ -453,7 +784,9 @@
 .icon-svg {
   width: 18px;
   height: 18px;
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
 }
 
 .btn-edit,
@@ -856,4 +1189,70 @@
     font-size: 0.75rem !important;
     max-height: 3rem !important;
   }
+}
+
+/* Strong containment rules to prevent any event from overflowing its day cell */
+:deep(.fc .fc-daygrid-day-events),
+:deep(.fc .fc-daygrid-day-frame),
+:deep(.fc .fc-daygrid-day) {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Ensure harness and block event obey the cell width and do not translate outside */
+:deep(.fc .fc-daygrid-event-harness),
+:deep(.fc .fc-daygrid-block-event),
+:deep(.fc .fc-daygrid-day-bottom) {
+  position: relative !important;
+  left: 0 !important;
+  transform: none !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Force the anchor/event element to strictly clip its content */
+:deep(a.fc-event), :deep(.fc .fc-daygrid-event) {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  left: 0 !important;
+  transform: none !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+/* If event text still overflows, force ellipsis on the title element */
+:deep(.fc .fc-evt-title), :deep(.fc .fc-evt-right > .fc-evt-title) {
+  display: inline-block !important;
+  max-width: calc(100% - 24px) !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+:deep(.fc .fc-event-main) {
+  width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+:deep(.fc .fc-event .fc-evt-right) {
+  flex: 1 1 auto !important;
+  min-width: 0 !important; /* crítico para permitir encolhimento em flexbox */
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  max-width: calc(100% - 22px) !important;
+}
+
+:deep(.fc .fc-event .fc-evt-title),
+:deep(.fc .fc-event .fc-evt-sub-client),
+:deep(.fc .fc-event .fc-evt-sub) {
+  display: block !important;
+  width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
 }

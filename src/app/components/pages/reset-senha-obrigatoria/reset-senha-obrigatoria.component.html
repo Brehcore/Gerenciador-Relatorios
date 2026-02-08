@@ -1,7 +1,7 @@
 <div class="reset-container">
   <div class="reset-card">
     <div class="reset-header">
-      <div class="reset-icon">🔐</div>
+    <div class="reset-icon"><img src="assets/icons/lock.svg" class="icon-svg" alt="Senha"/></div>
       <h1>Definir Senha</h1>
       <p class="reset-subtitle">Sua primeira vez acessando a plataforma</p>
     </div>
@@ -31,7 +31,7 @@
             Mínimo 8 caracteres ({{ newPassword.length }}/8)
           </small>
           <small *ngIf="newPassword.length >= 8" class="form-hint success">
-            Comprimento de senha válido ✓
+            Comprimento de senha válido <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
           </small>
         </div>
 
@@ -50,7 +50,7 @@
             As senhas não conferem
           </small>
           <small *ngIf="confirmPassword && newPassword === confirmPassword && newPassword.length >= 8" class="form-hint success">
-            Senhas coincidem ✓
+            Senhas coincidem <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
           </small>
         </div>
 
@@ -58,7 +58,12 @@
           type="submit"
           class="btn-submit"
           [disabled]="submitting || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8">
-          {{ submitting ? '⏳ Definindo senha...' : '✓ Definir Senha' }}
+          <ng-container *ngIf="submitting">
+            <img src="assets/icons/pending.svg" class="icon-svg" alt="Aguardando"/> Definindo senha...
+          </ng-container>
+          <ng-container *ngIf="!submitting">
+            <img src="assets/icons/confirm.svg" class="icon-svg" alt="Definir"/> Definir Senha
+          </ng-container>
         </button>
       </form>
 

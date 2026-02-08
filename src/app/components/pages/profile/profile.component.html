@@ -9,10 +9,10 @@
           </div>
           <div class="profile-actions-buttons">
             <button type="button" class="btn-change-password" (click)="openChangePasswordModal()" title="Alterar senha">
-              🔐 Alterar Senha
+              <img src="assets/icons/lock.svg" class="icon-svg" alt="Alterar senha"/> Alterar Senha
             </button>
             <button type="button" class="btn-change-email" (click)="openChangeEmailModal()" title="Alterar email">
-              📧 Alterar Email
+              <img src="assets/icons/mail.svg" class="icon-svg" alt="Alterar email"/> Alterar Email
             </button>
           </div>
         </div>
@@ -22,35 +22,35 @@
     <div class="profile-details">
       <div class="info-grid">
         <div class="info-card">
-          <div class="info-label">👤 Perfil</div>
+          <div class="info-label"><img src="assets/icons/user.svg" class="icon-svg" alt="Perfil"/> Perfil</div>
           <div class="info-value">{{ profile?.role === 'ADMIN' ? 'Administrador' : 'Usuário' }}</div>
         </div>
         <div class="info-card">
-          <div class="info-label">📧 Email</div>
+          <div class="info-label"><img src="assets/icons/mail.svg" class="icon-svg" alt="Email"/> Email</div>
           <div class="info-value">{{ profile?.email || '-' }}</div>
         </div>
         <div class="info-card">
-          <div class="info-label">📱 Telefone</div>
+          <div class="info-label"><img src="assets/icons/phone.svg" class="icon-svg" alt="Telefone"/> Telefone</div>
           <div class="info-value">{{ profile?.phone || profile?.telefone || '-' }}</div>
         </div>
         <div class="info-card">
-          <div class="info-label">🆔 CPF</div>
+          <div class="info-label"><img src="assets/icons/id.svg" class="icon-svg" alt="CPF"/> CPF</div>
           <div class="info-value">{{ profile?.cpf || '-' }}</div>
         </div>
         <div class="info-card">
-          <div class="info-label">🎓 Sigla Conselho</div>
+          <div class="info-label"><img src="assets/icons/diploma.svg" class="icon-svg" alt="Conselho"/> Sigla Conselho</div>
           <div class="info-value">{{ profile?.siglaConselhoClasse || '-' }}</div>
         </div>
         <div class="info-card">
-          <div class="info-label">📜 Conselho / Registro</div>
+          <div class="info-label"><img src="assets/icons/diploma.svg" class="icon-svg" alt="Conselho"/> Conselho / Registro</div>
           <div class="info-value">{{ profile?.conselhoClasse || profile?.registro || '-' }}</div>
         </div>
         <div class="info-card">
-          <div class="info-label">💼 Especialidade</div>
+          <div class="info-label"><img src="assets/icons/briefcase.svg" class="icon-svg" alt="Especialidade"/> Especialidade</div>
           <div class="info-value">{{ profile?.especialidade || '-' }}</div>
         </div>
         <div class="info-card">
-          <div class="info-label">🎂 Data de Nascimento</div>
+          <div class="info-label"><img src="assets/icons/cake.svg" class="icon-svg" alt="Data de Nascimento"/> Data de Nascimento</div>
           <div class="info-value">{{ formatDate(profile?.birthDate || profile?.dataNascimento) }}</div>
         </div>
         <div class="info-card">
@@ -69,7 +69,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>Alterar Senha</h3>
-        <button type="button" class="modal-close" (click)="closeChangePasswordModal()" title="Fechar modal">✕</button>
+        <button type="button" class="modal-close" (click)="closeChangePasswordModal()" title="Fechar modal"><img src="assets/icons/close.svg" class="icon-svg" alt="Fechar"/></button>
       </div>
       
       <div class="modal-body">
@@ -100,7 +100,7 @@
             Mínimo 8 caracteres ({{ newPassword.length }}/8)
           </small>
           <small *ngIf="newPassword.length >= 8" class="form-hint success">
-            Comprimento de senha válido ✓
+            Comprimento de senha válido <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
           </small>
         </div>
 
@@ -117,7 +117,7 @@
             As senhas não conferem
           </small>
           <small *ngIf="confirmPassword && newPassword === confirmPassword && newPassword.length >= 8" class="form-hint success">
-            Senhas coincidem ✓
+            Senhas coincidem <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
           </small>
         </div>
       </div>
@@ -134,7 +134,12 @@
           class="btn-primary"
           (click)="submitChangePassword()"
           [disabled]="changePasswordSubmitting || !newPassword || !confirmPassword || !currentPasswordForPassword || newPassword !== confirmPassword || newPassword.length < 8">
-          {{ changePasswordSubmitting ? '⏳ Alterando...' : '✓ Alterar Senha' }}
+          <ng-container *ngIf="changePasswordSubmitting">
+            <img src="assets/icons/pending.svg" class="icon-svg" alt="Enviando"/> Alterando...
+          </ng-container>
+          <ng-container *ngIf="!changePasswordSubmitting">
+            <img src="assets/icons/confirm.svg" class="icon-svg" alt="Alterar"/> Alterar Senha
+          </ng-container>
         </button>
       </div>
     </div>
@@ -146,7 +151,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>Alterar Email</h3>
-        <button type="button" class="modal-close" (click)="closeChangeEmailModal()" title="Fechar modal">✕</button>
+        <button type="button" class="modal-close" (click)="closeChangeEmailModal()" title="Fechar modal"><img src="assets/icons/close.svg" class="icon-svg" alt="Fechar"/></button>
       </div>
       
       <div class="modal-body">
@@ -163,7 +168,7 @@
             Email inválido
           </small>
           <small *ngIf="newEmail.length > 0 && isValidEmail(newEmail)" class="form-hint success">
-            Email válido ✓
+            Email válido <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
           </small>
         </div>
 
@@ -180,7 +185,7 @@
             Os emails não conferem
           </small>
           <small *ngIf="confirmEmail && newEmail === confirmEmail && isValidEmail(newEmail)" class="form-hint success">
-            Emails coincidem ✓
+            Emails coincidem <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
           </small>
         </div>
 
@@ -211,7 +216,12 @@
           class="btn-primary"
           (click)="submitChangeEmail()"
           [disabled]="changeEmailSubmitting || !newEmail || !confirmEmail || !currentPassword || newEmail !== confirmEmail || !isValidEmail(newEmail)">
-          {{ changeEmailSubmitting ? '⏳ Alterando...' : '✓ Alterar Email' }}
+          <ng-container *ngIf="changeEmailSubmitting">
+            <img src="assets/icons/pending.svg" class="icon-svg" alt="Enviando"/> Alterando...
+          </ng-container>
+          <ng-container *ngIf="!changeEmailSubmitting">
+            <img src="assets/icons/confirm.svg" class="icon-svg" alt="Alterar"/> Alterar Email
+          </ng-container>
         </button>
       </div>
     </div>

@@ -5,7 +5,7 @@
       <div class="filter-responsible">
         <label for="filterResponsible" class="sr-only">Filtrar por responsável</label>
         <div class="search-box">
-          <span class="search-icon" aria-hidden="true">🔎</span>
+          <span class="search-icon" aria-hidden="true"><img src="assets/icons/search.svg" class="icon-svg" alt="Pesquisar"/></span>
           <input id="filterResponsible" type="text" placeholder="Filtrar por responsável" [(ngModel)]="filterResponsibleInput" class="form-control search-input" title="Digite o nome do responsável para filtrar" />
         </div>
         <button type="button" class="btn-filter" (click)="applyResponsibleFilter()" [disabled]="!filterResponsibleInput" title="Aplicar filtro">Filtrar</button>
@@ -18,14 +18,14 @@
           class="tab-btn" 
           [class.active]="viewMode === 'calendar'"
           (click)="switchView('calendar')">
-          📅 Calendário
+          <img src="assets/icons/calendar.svg" class="icon-svg" alt="Calendário"/> Calendário
         </button>
         <button 
           type="button" 
           class="tab-btn" 
           [class.active]="viewMode === 'list'"
           (click)="switchView('list')">
-          📋 Listagem
+          <img src="assets/icons/list.svg" class="icon-svg" alt="Listagem"/> Listagem
         </button>
       </div>
       
@@ -41,7 +41,8 @@
       </div>
       
       <button type="button" class="btn-primary" (click)="createNew()">+ Novo Evento</button>
-      <button type="button" class="btn-secondary" (click)="loadEventos()">🔄 Atualizar</button>
+      <button type="button" class="btn-export" (click)="openExportModal()"><img src="assets/icons/export.svg" class="icon-svg" alt="Exportar"/> Exportar Relatório</button>
+      <button type="button" class="btn-secondary" (click)="loadEventos()"><img src="assets/icons/refresh.svg" class="icon-svg" alt="Atualizar"/> Atualizar</button>
     </div>
   </div>
 
@@ -58,29 +59,43 @@
       <p>Nenhum evento encontrado. <button type="button" (click)="createNew()" class="btn-link">Criar novo</button></p>
     </div>
     <ul class="agenda-list" *ngIf="eventos.length > 0">
-      <li *ngFor="let it of eventos; trackBy: trackByEventoId" class="agenda-item" [class]="'type-' + (it.type || 'EVENTO').toLowerCase()">
+      <li *ngFor="let it of eventos; trackBy: trackByEventoId" class="agenda-item" [class]="'type-' + (it.type || 'EVENTO').toLowerCase() + ' ' + getStatusClass(it.status)">
         <div class="left">
           <div class="title">{{ it.title }}</div>
+          <div class="client-display" *ngIf="it.clientName || it.unitName || it.sectorName">{{ it.clientName }}<span *ngIf="it.unitName"> - {{ it.unitName }}</span><span *ngIf="it.sectorName"> - {{ it.sectorName }}</span></div>
           <div class="meta">
             {{ formatDateToBrazil(it.date) }}
-            <span *ngIf="it.shift" class="shift-badge">• {{ it.shift === 'MANHA' ? '🌅 Manhã' : '🌆 Tarde' }}</span>
-            • <span class="type" [class]="'badge-' + (it.type || 'EVENTO').toLowerCase()">{{ it.type || 'EVENTO' }}</span>
+            <span *ngIf="it.shift" class="shift-badge">
+              <img [src]="it.shift === 'MANHA' ? 'assets/icons/sunrise.svg' : 'assets/icons/sunset.svg'" class="icon-svg" alt="Turno"/>
+              {{ it.shift === 'MANHA' ? 'Manhã' : 'Tarde' }}
+            </span>
+            • <span class="type" [class]="'badge-' + (it.type || 'EVENTO').toLowerCase()">{{ formatEventType(it.type) }}</span>
+          </div>
+          <div class="status-line" *ngIf="it.status || it.statusDescricao">
+            <span class="status-chip" [ngClass]="getStatusClass(it.status)">{{ it.statusDescricao || it.status }}</span>
           </div>
           <div class="responsible" *ngIf="it.responsibleName">Responsável: {{ it.responsibleName }}</div>
           <div class="desc" *ngIf="it.description">{{ it.description }}</div>
-          <div class="log" *ngIf="(it.type || 'EVENTO') === 'VISITA_REAGENDADA'">
+          <div class="log" *ngIf="it.status === 'REAGENDADO'">
             <small>Original: {{ it.originalVisitDate }} • Fonte: {{ it.sourceVisitId }}</small>
           </div>
         </div>
         <div class="actions" *ngIf="!isAdmin">
-          <button type="button" class="icon-btn" title="Reagendar visita" *ngIf="(it.type || 'EVENTO') === 'VISITA'" (click)="editEvent(it)">
+          <!-- Confirm / Cancel actions for VISITA_TECNICA (when not historical) -->
+          <button type="button" class="icon-btn" title="Confirmar visita" *ngIf="(it.type || 'EVENTO') === 'VISITA_TECNICA' && it.status !== 'REAGENDADO' && it.status !== 'CONFIRMADO'" (click)="confirmVisit(it)">
+            <img src="assets/icons/confirm.svg" class="icon-svg" alt="Confirmar"/>
+          </button>
+          <button type="button" class="icon-btn" title="Cancelar visita" *ngIf="(it.type || 'EVENTO') === 'VISITA_TECNICA' && it.status !== 'REAGENDADO' && it.status !== 'CANCELADO'" (click)="cancelVisit(it)">
+            <img src="assets/icons/canceled.svg" class="icon-svg" alt="Cancelar"/>
+          </button>
+          <button type="button" class="icon-btn" title="Reagendar visita" *ngIf="(it.type || 'EVENTO') === 'VISITA_TECNICA' && it.status !== 'REAGENDADO'" (click)="editEvent(it)">
             <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="#374151" stroke-width="1.6" fill="none"></rect>
               <path d="M16 2v4M8 2v4" stroke="#374151" stroke-width="1.6" stroke-linecap="round"></path>
               <path d="M3 10h18" stroke="#374151" stroke-width="1.6"></path>
             </svg>
           </button>
-          <button type="button" class="icon-btn" title="Re-reagendar visita" *ngIf="(it.type || 'EVENTO') === 'VISITA_REAGENDADA'" (click)="editEvent(it)">
+          <button type="button" class="icon-btn" title="Re-reagendar visita" *ngIf="(it.type || 'EVENTO') === 'VISITA_TECNICA' && it.status === 'REAGENDADO'" (click)="editEvent(it)">
             <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M1 4v6h6M23 20v-6h-6" stroke="#374151" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" stroke="#374151" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -92,7 +107,7 @@
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="#374151" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
-          <button *ngIf="(it.type || 'EVENTO') === 'EVENTO' || (it.type || 'EVENTO') === 'VISITA_REAGENDADA'" type="button" class="icon-btn" title="Deletar evento" (click)="deleteEvent(it)">
+          <button *ngIf="(it.type || 'EVENTO') === 'EVENTO' || ((it.type || 'EVENTO') === 'VISITA_TECNICA' && it.status === 'REAGENDADO')" type="button" class="icon-btn" title="Deletar evento" (click)="deleteEvent(it)">
             <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="#374151" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -108,4 +123,21 @@
     (deleteAction)="onModalDelete($event)"
     (requestEdit)="onModalRequestEdit()"
   ></app-agenda-modal>
+
+  <!-- Export Modal (simples) -->
+  <div class="export-modal-backdrop" *ngIf="showExportModal">
+    <div class="export-modal">
+      <h3>Exportar relatório (PDF)</h3>
+      <div class="export-fields">
+        <label for="exportStart">Data Inicial</label>
+        <input id="exportStart" type="date" [(ngModel)]="exportStart" />
+        <label for="exportEnd">Data Final</label>
+        <input id="exportEnd" type="date" [(ngModel)]="exportEnd" />
+      </div>
+      <div class="export-actions">
+        <button type="button" class="btn-primary" (click)="exportarRelatorio()"><img src="assets/icons/export.svg" class="icon-svg" alt="Baixar"/> Baixar PDF</button>
+        <button type="button" class="btn-secondary" (click)="closeExportModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
 </div>

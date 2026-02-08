@@ -1,7 +1,7 @@
 <div class="cadastros-root">
   <!-- Cadastro de Empresas Section -->
   <section class="cadastros-section">
-    <h2>🏢 Cadastro de Empresas</h2>
+    <h2><img src="assets/icons/building.svg" class="icon-svg" alt="Empresas"/> Cadastro de Empresas</h2>
     <p>Registre novas empresas no sistema com seus dados, unidades e setores de atuação.</p>
     
     <div class="form-card">
@@ -30,7 +30,7 @@
 
       <!-- Unidades Section -->
       <div class="units-section">
-        <h4>📍 Unidades</h4>
+        <h4><img src="assets/icons/pin.svg" class="icon-svg" alt="Unidades"/> Unidades</h4>
         <div class="unit-inputs">
           <input 
             #unitName 
@@ -64,7 +64,7 @@
 
       <!-- Setores Section -->
       <div class="units-section">
-        <h4>🏭 Setores</h4>
+        <h4><img src="assets/icons/factory.svg" class="icon-svg" alt="Setores"/> Setores</h4>
         <div class="sector-inputs">
           <input 
             [(ngModel)]="sectorInput" 
@@ -97,7 +97,12 @@
           class="btn-primary" 
           (click)="submit()" 
           [disabled]="submitting || !companyName || !companyCnpj || !isCnpjValid()">
-          {{ submitting ? '⏳ Enviando...' : '✓ Cadastrar Empresa' }}
+          <ng-container *ngIf="submitting">
+            <img src="assets/icons/pending.svg" class="icon-svg" alt="Enviando"/> Enviando...
+          </ng-container>
+          <ng-container *ngIf="!submitting">
+            <img src="assets/icons/confirm.svg" class="icon-svg" alt="Cadastrar"/> Cadastrar Empresa
+          </ng-container>
         </button>
       </div>
     </div>
@@ -177,7 +182,7 @@
                   class="btn-edit"
                   (click)="openEditCompanyModal(company)"
                   title="Editar empresa">
-                  ✏️ Editar
+                  <img src="assets/icons/pencil.svg" class="icon-svg" alt="Editar"/> Editar
                 </button>
               </div>
             </div>
@@ -198,7 +203,7 @@
 
   <!-- Cadastro de Clientes Section -->
   <section class="cadastros-section">
-    <h2>👥 Cadastro de Clientes</h2>
+  <h2><img src="assets/icons/user.svg" class="icon-svg" alt="Clientes"/> Cadastro de Clientes</h2>
     <p>Crie novos clientes e associe-os às empresas cadastradas no sistema.</p>
     
     <div class="form-card">
@@ -254,7 +259,12 @@
           class="btn-primary" 
           (click)="submitClient()" 
           [disabled]="clientSubmitting || !clientName || !clientEmail">
-          {{ clientSubmitting ? '⏳ Enviando...' : '✓ Cadastrar Cliente' }}
+          <ng-container *ngIf="clientSubmitting">
+            <img src="assets/icons/pending.svg" class="icon-svg" alt="Enviando"/> Enviando...
+          </ng-container>
+          <ng-container *ngIf="!clientSubmitting">
+            <img src="assets/icons/confirm.svg" class="icon-svg" alt="Cadastrar"/> Cadastrar Cliente
+          </ng-container>
         </button>
       </div>
     </div>
@@ -267,13 +277,7 @@
         (click)="toggleClientsList()">
         <span class="toggle-icon" [class.open]="showClientsList">▶</span>
         {{ showClientsList ? 'Ocultar' : 'Mostrar' }} Clientes Cadastrados ({{ clientsTotalElements }})
-      </button>
-      
-      <div class="list-container" *ngIf="showClientsList">
-        <div *ngIf="clientsList.length === 0" class="empty-state">
-          <p>Nenhum cliente cadastrado ainda.</p>
-        </div>
-        
+        </button>
         <!-- Paginação de Clientes -->
         <div *ngIf="clientsList.length > 0 && clientsTotalPages > 1" class="pagination-wrapper">
           <div class="pagination-info">
@@ -334,7 +338,7 @@
                   class="btn-edit"
                   (click)="openEditClientModal(client)"
                   title="Editar cliente">
-                  ✏️ Editar
+                  <img src="assets/icons/pencil.svg" class="icon-svg" alt="Editar"/> Editar
                 </button>
               </div>
             </div>
@@ -347,7 +351,6 @@
           </li>
         </ul>
       </div>
-    </div>
   </section>
 
   <!-- Modal de Editar Empresa -->
@@ -356,7 +359,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>Editar Empresa</h3>
-        <button type="button" class="modal-close" (click)="closeEditCompanyModal()" title="Fechar modal">✕</button>
+        <button type="button" class="modal-close" (click)="closeEditCompanyModal()" title="Fechar modal"><img src="assets/icons/close.svg" class="icon-svg" alt="Fechar"/></button>
       </div>
 
       <div class="modal-body">
@@ -384,7 +387,7 @@
 
         <!-- Unidades -->
         <div class="units-section">
-          <h4>📍 Unidades</h4>
+          <h4><img src="assets/icons/pin.svg" class="icon-svg" alt="Unidades"/> Unidades</h4>
           <div class="unit-inputs">
             <input 
               #editUnitName 
@@ -422,7 +425,7 @@
 
         <!-- Setores -->
         <div class="units-section">
-          <h4>🏭 Setores</h4>
+          <h4><img src="assets/icons/factory.svg" class="icon-svg" alt="Setores"/> Setores</h4>
           <div class="sector-inputs">
             <input 
               #editSectorInput
@@ -477,7 +480,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>Editar Cliente</h3>
-        <button type="button" class="modal-close" (click)="closeEditClientModal()" title="Fechar modal">✕</button>
+        <button type="button" class="modal-close" (click)="closeEditClientModal()" title="Fechar modal"><img src="assets/icons/close.svg" class="icon-svg" alt="Fechar"/></button>
       </div>
 
       <div class="modal-body">

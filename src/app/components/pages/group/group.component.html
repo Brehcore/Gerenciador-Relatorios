@@ -35,7 +35,7 @@
 			<li *ngFor="let ev of upcomingEventsAll" class="upcoming-item">
 					<div class="ev-date">{{ formatDateToBrazil(ev.date) }}</div>
 					<div class="ev-body">
-						<div class="ev-title">{{ ev.title }} <span class="agenda-badge" [ngClass]="{ 'visita': ev.type==='VISITA', 'evento': ev.type==='EVENTO' }">{{ ev.type }}</span></div>
+						<div class="ev-title">{{ ev.title }} <span class="agenda-badge" [ngClass]="{ 'visita': ev.type==='VISITA_TECNICA', 'evento': ev.type==='EVENTO' }">{{ ev.type }}</span></div>
 						<div class="ev-sub">{{ ev.unitName || '' }}<span *ngIf="ev.unitName && ev.sectorName"> • </span>{{ ev.sectorName || '' }}</div>
 					</div>
 			</li>

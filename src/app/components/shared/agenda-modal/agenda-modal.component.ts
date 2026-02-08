@@ -24,6 +24,9 @@ export interface AgendaModalData {
   nextVisitDate?: string | null;   // Data da próxima visita agendada
   nextVisitShift?: 'MANHA' | 'TARDE'; // Turno da próxima visita agendada
   responsibleName?: string | null;
+  // status fields (opcionais) — podem ser usados pela view para controlar ações
+  status?: 'CONFIRMADO' | 'A_CONFIRMAR' | 'REAGENDADO' | 'CANCELADO' | null;
+  statusDescricao?: string | null;
 }
 
 @Component({
@@ -44,64 +47,158 @@ export interface AgendaModalData {
         <div class="modal-body">
           <!-- VIEW: Mostrar detalhes do evento e ações -->
           <ng-container *ngIf="mode === 'view'">
-            <div class="details-card">
-              <div class="details-header">
-                <div class="details-left">
-                  <div class="details-title">{{ formData.title }}</div>
-                  <div class="details-sub">{{ formData.unitName || '—' }} • {{ formData.sectorName || '—' }}</div>
-                </div>
-                <div class="details-right">
-                  <span class="badge-type">{{ (formData.type || 'EVENTO') | uppercase }}</span>
-                  <div class="details-date">{{ formatDateToBrazil(formData.date) }}</div>
+            <div class="view-container">
+              <!-- Main Header Card -->
+              <div class="header-card">
+                <div class="header-content">
+                  <div class="header-left">
+                    <h2 class="event-title">{{ formData.title }}</h2>
+                    <p class="event-subtitle">{{ formData.clientName || 'Sem cliente definido' }}</p>
+                  </div>
+                  <div class="header-right">
+                    <span class="badge badge-type" [class]="'badge-' + (formData.type || 'EVENTO').toLowerCase()">
+                      {{ formatEventType(formData.type) }}
+                    </span>
+                    <span class="badge badge-status" [class]="'status-' + (formData.status || 'neutro').toLowerCase()">
+                      {{ formData.statusDescricao || formData.status || 'Sem status' }}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div class="details-body">
-                <div class="details-row" *ngIf="formData.description">
-                  <div class="label">Descrição</div>
-                  <div class="value view-desc">{{ formData.description }}</div>
+              <!-- Description Section -->
+              <div *ngIf="formData.description" class="section-card description-card">
+                <div class="section-label">
+                  <svg class="icon-section" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Descrição
+                </div>
+                <p class="section-value">{{ formData.description }}</p>
+              </div>
+
+              <!-- Info Grid -->
+              <div class="info-grid">
+                <!-- Left Column: Data & Turno -->
+                <div class="info-card">
+                  <div class="info-header">
+                    <svg class="icon-header" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
+                      <path d="M16 2v4M8 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      <path d="M3 10h18" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Agendamento
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Data</span>
+                    <span class="info-value">{{ formatDateToBrazil(formData.date) }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Turno</span>
+                    <span class="info-value">
+                      <span class="shift-badge" [class]="'shift-' + (formData.shift || 'MANHA').toLowerCase()">
+                        <svg *ngIf="formData.shift === 'MANHA'" class="icon-shift" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+                          <path d="M12 1v6m0 6v6m11-11h-6m-6 0H1m16-3l-4 4m-6 0l-4-4m16 8l-4-4m-6 0l-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <svg *ngIf="formData.shift === 'TARDE'" class="icon-shift" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        {{ formData.shift === 'MANHA' ? 'Manhã' : formData.shift === 'TARDE' ? 'Tarde' : '—' }}
+                      </span>
+                    </span>
+                  </div>
                 </div>
 
-                <div class="meta-grid">
-                  <div class="meta-item">
-                    <div class="label">Cliente/Empresa</div>
-                    <div class="value">{{ formData.clientName || '—' }}</div>
+                <!-- Right Column: Location & Responsible -->
+                <div class="info-card">
+                  <div class="info-header">
+                    <svg class="icon-header" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Localização
                   </div>
-                  <div class="meta-item">
-                    <div class="label">Turno</div>
-                    <div class="value">{{ formData.shift === 'MANHA' ? 'Manhã' : formData.shift === 'TARDE' ? 'Tarde' : '—' }}</div>
+                  <div class="info-row">
+                    <span class="info-label">Unidade</span>
+                    <span class="info-value">{{ formData.unitName || '—' }}</span>
                   </div>
-                  <div class="meta-item">
-                    <div class="label">Data Original</div>
-                    <div class="value">{{ formData.originalVisitDate ? formatDateToBrazil(formData.originalVisitDate) : '—' }}</div>
+                  <div class="info-row">
+                    <span class="info-label">Setor</span>
+                    <span class="info-value">{{ formData.sectorName || '—' }}</span>
                   </div>
-                  <div class="meta-item">
-                    <div class="label">Próxima Visita</div>
-                    <div class="value">{{ formData.nextVisitDate ? formatDateToBrazil(formData.nextVisitDate) : '—' }}</div>
-                  </div>
-                  <div class="meta-item">
-                    <div class="label">Turno Próxima Visita</div>
-                    <div class="value">{{ formData.nextVisitShift === 'MANHA' ? 'Manhã' : formData.nextVisitShift === 'TARDE' ? 'Tarde' : '—' }}</div>
-                  </div>
-                  <div class="meta-item">
-                    <div class="label">Visit ID Origem</div>
-                    <div class="value">{{ formData.sourceVisitId || '—' }}</div>
-                  </div>
-                  <div class="meta-item">
-                    <div class="label">Responsável</div>
-                    <div class="value">{{ formData.responsibleName || '—' }}</div>
-                  </div>
-                </div>
                 </div>
 
-                <!-- Inline delete confirmation banner -->
-                <div *ngIf="showDeleteConfirm" class="delete-banner">
-                  <div class="delete-message">Deseja realmente excluir o evento "<strong>{{ formData.title }}</strong>" em <strong>{{ formatDateToBrazil(formData.date) }}</strong>?</div>
-                  <div class="delete-actions">
-                    <button class="btn-danger" (click)="doConfirmDelete()">🗑️ Confirmar exclusão</button>
-                    <button class="btn-close" (click)="cancelDelete()">Cancelar</button>
+                <!-- Left Column: Original Visit -->
+                <div class="info-card" *ngIf="formData.originalVisitDate || formData.sourceVisitId">
+                  <div class="info-header">
+                    <svg class="icon-header" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M9 11l3 3L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Origem
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Data Original</span>
+                    <span class="info-value">{{ formData.originalVisitDate ? formatDateToBrazil(formData.originalVisitDate) : '—' }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Visit ID</span>
+                    <span class="info-value">{{ formData.sourceVisitId || '—' }}</span>
                   </div>
                 </div>
+
+                <!-- Right Column: Next Visit -->
+                <div class="info-card" *ngIf="formData.nextVisitDate || formData.nextVisitShift">
+                  <div class="info-header">
+                    <svg class="icon-header" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <polyline points="23 4 23 10 17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Próxima
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Data Próxima</span>
+                    <span class="info-value">{{ formData.nextVisitDate ? formatDateToBrazil(formData.nextVisitDate) : '—' }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Turno</span>
+                    <span class="info-value">
+                      {{ formData.nextVisitShift === 'MANHA' ? 'Manhã' : formData.nextVisitShift === 'TARDE' ? 'Tarde' : '—' }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Responsible -->
+                <div class="info-card" *ngIf="formData.responsibleName">
+                  <div class="info-header">
+                    <svg class="icon-header" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Responsável
+                  </div>
+                  <div class="info-row">
+                    <span class="info-label">Nome</span>
+                    <span class="info-value">{{ formData.responsibleName }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Inline delete confirmation banner -->
+              <div *ngIf="showDeleteConfirm" class="delete-banner">
+                <div class="delete-message">Deseja realmente excluir o evento "<strong>{{ formData.title }}</strong>"?</div>
+                <div class="delete-actions">
+                  <button class="btn-danger" (click)="doConfirmDelete()">
+                    <svg class="icon-btn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Confirmar
+                  </button>
+                  <button class="btn-cancel" (click)="cancelDelete()">Cancelar</button>
+                </div>
+              </div>
             </div>
           </ng-container>
           <!-- CREATE / EDIT: Evento -->
@@ -198,10 +295,35 @@ export interface AgendaModalData {
         <div class="modal-footer">
           <ng-container *ngIf="mode === 'view'">
             <div class="footer-left">
-              <button type="button" class="btn-edit" (click)="onRequestEdit()">✏️ Editar</button>
+              <button type="button" class="btn-edit" (click)="onRequestEdit()">
+                <svg class="icon-btn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Editar
+              </button>
             </div>
             <div class="footer-right">
-              <button type="button" class="btn-danger" (click)="onDelete()">🗑️ Excluir</button>
+              <!-- Confirm / Cancel visit actions (only for VISITA_TECNICA and when not historical) -->
+              <button *ngIf="formData.type === 'VISITA_TECNICA' && formData['status'] !== 'REAGENDADO' && formData['status'] !== 'CONFIRMADO'" type="button" class="btn-edit" (click)="doConfirmVisit()" [disabled]="isConfirming">
+                <svg class="icon-btn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Confirmar
+              </button>
+              <button *ngIf="formData.type === 'VISITA_TECNICA' && formData['status'] !== 'REAGENDADO' && formData['status'] !== 'CANCELADO'" type="button" class="btn-danger" (click)="doCancelVisit()" [disabled]="isConfirming">
+                <svg class="icon-btn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Cancelar
+              </button>
+              <button type="button" class="btn-danger" (click)="onDelete()">
+                <svg class="icon-btn" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Excluir
+              </button>
               <button type="button" class="btn-close" (click)="cancel()">Fechar</button>
             </div>
           </ng-container>
@@ -258,36 +380,238 @@ export interface AgendaModalData {
     }
     .close-btn:hover { background: rgba(0,0,0,0.03); }
     .modal-body { padding: 18px 20px; }
-    .details-card { background:#fbfcfd; border:1px solid #eef3f8; border-radius:8px; padding:14px; }
-  .details-header { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:10px; }
-  .details-left { display:flex; flex-direction:column; }
-  .details-right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
-  .details-title { font-weight:700; color:#0f172a; font-size:1.05rem; }
-  .details-sub { font-size:0.9rem; color:#475569; }
-  .details-date { font-weight:700; color:#0b1220; }
-  .details-ref { font-size:0.85rem; color:#6b7280; }
-  .badge-type { background:#eef2ff; color:#3730a3; padding:6px 8px; border-radius:999px; font-weight:700; font-size:0.75rem; }
-  .details-meta { font-size:0.85rem; color:#334155; }
-  .details-body { display:grid; gap:10px; }
-  .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px; }
-  .meta-item .label { font-weight:600; color:#475569; margin-bottom:4px; }
-  .reschedule-card { background:#fffdf7; border:1px solid #fff1e6; border-radius:8px; padding:12px; margin-bottom:6px; }
-  .reschedule-header { display:flex; gap:12px; align-items:center; margin-bottom:8px; }
-  .icon-reschedule { width:24px; height:24px; color:#d97706; }
-  .reschedule-title { font-weight:700; color:#92400e; }
-  .reschedule-sub { font-size:0.9rem; color:#7c2d12; }
-  .reschedule-body label { display:block; margin-top:8px; font-weight:600; color:#475569; }
-  .reschedule-body input, .reschedule-body textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #e6eef7; margin-top:6px; }
-  .reschedule-body .hint { font-size:0.85rem; color:#6b7280; margin-top:8px; }
-    .details-row { display:flex; gap:12px; }
-    .details-row .label { min-width:120px; font-weight:600; color:#475569; }
-    .details-row .value { color:#0b1220; }
-    .details-body .value { white-space:normal; }
-    .view-desc { background: #fff; padding:10px; border-radius:6px; border:1px solid #e6eef7; color:#0b1220; }
+    
+    /* View Mode Styles */
+    .view-container { display: flex; flex-direction: column; gap: 14px; }
+    
+    .header-card {
+      background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+      border: 1px solid #dce7f0;
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+      gap: 20px;
+    }
+    
+    .header-left { flex: 1; }
+    .header-right { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+    
+    .event-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+    
+    .event-subtitle {
+      margin: 6px 0 0 0;
+      font-size: 0.95rem;
+      color: #64748b;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .badge-type {
+      background: #eef2ff;
+      color: #3730a3;
+      border: 1px solid #c7d2fe;
+    }
+    
+    .badge-evento { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .badge-visita_tecnica { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .badge-treinamento { background: #cffafe; color: #0e7490; border: 1px solid #06b6d4; }
+    
+    .badge-status {
+      border: 1px solid;
+    }
+    
+    .status-confirmado { background: #ecfdf5; color: #065f46; border-color: #6ee7b7; }
+    .status-a_confirmar { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
+    .status-reagendado { background: #f3f4f6; color: #374151; border-color: #d1d5db; font-style: italic; }
+    .status-cancelado { background: #fef2f2; color: #7f1d1d; border-color: #fca5a5; }
+    .status-neutro { background: #f0f9ff; color: #0c4a6e; border-color: #38bdf8; }
+    
+    .section-card {
+      background: #fffbf5;
+      border: 1px solid #fde2d4;
+      border-radius: 8px;
+      padding: 14px;
+    }
+    
+    .description-card { background: #f0fdf4; border-color: #bbf7d0; }
+    
+    .section-label {
+      font-weight: 700;
+      color: #5a3a1a;
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-    .delete-banner { margin-top:12px; padding:12px; border-radius:8px; background: linear-gradient(180deg,#fff7f7,#fff1f0); border:1px solid #fee2e2; display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    .delete-message { color:#7f1d1d; font-weight:600; }
-    .delete-actions { display:flex; gap:8px; }
+    .icon-section {
+      width: 18px;
+      height: 18px;
+      color: #92400e;
+      flex-shrink: 0;
+    }
+    
+    .section-value {
+      color: #292524;
+      line-height: 1.5;
+      font-size: 0.95rem;
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    @media (max-width: 640px) {
+      .info-grid { grid-template-columns: 1fr; }
+    }
+    
+    .info-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    
+    .info-header {
+      font-weight: 700;
+      color: #1f2937;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-header {
+      width: 16px;
+      height: 16px;
+      color: #3b82f6;
+      flex-shrink: 0;
+    }
+    
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      font-size: 0.9rem;
+    }
+    
+    .info-label {
+      font-weight: 600;
+      color: #6b7280;
+    }
+    
+    .info-value {
+      text-align: right;
+      color: #1f2937;
+      font-weight: 500;
+    }
+    
+    .shift-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .icon-shift {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+    
+    .shift-manha { background: #fff7ed; color: #b45309; }
+    .shift-tarde { background: #fed7aa; color: #7c2d12; }
+    
+    .delete-banner {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #fff7f7, #fff1f0);
+      border: 1px solid #fee2e2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .delete-message {
+      color: #7f1d1d;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    
+    .delete-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-cancel {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    
+    .btn-cancel:hover {
+      background: #e5e7eb;
+    }
+
+    .icon-btn {
+      width: 16px;
+      height: 16px;
+      display: inline;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    
+    .reschedule-card { background:#fffdf7; border:1px solid #fff1e6; border-radius:8px; padding:12px; margin-bottom:6px; }
+    .reschedule-header { display:flex; gap:12px; align-items:center; margin-bottom:8px; }
+    .icon-reschedule { width:24px; height:24px; color:#d97706; }
+    .reschedule-title { font-weight:700; color:#92400e; }
+    .reschedule-sub { font-size:0.9rem; color:#7c2d12; }
+    .reschedule-body label { display:block; margin-top:8px; font-weight:600; color:#475569; }
+    .reschedule-body input, .reschedule-body textarea { width:100%; padding:8px; border-radius:6px; border:1px solid #e6eef7; margin-top:6px; }
+    .reschedule-body .hint { font-size:0.85rem; color:#6b7280; margin-top:8px; }
 
     /* Form card for create/edit */
     .form-card { background:#ffffff; border:1px solid #eef3f8; border-radius:8px; padding:14px; }
@@ -305,17 +629,20 @@ export interface AgendaModalData {
     .form-group select:focus { outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.06); border-color:#93c5fd; }
     .error { color:#b91c1c; font-size:0.85rem; margin-top:6px; }
 
-    .modal-footer { padding: 14px 20px; border-top: 1px solid #f0f0f0; display:flex; align-items:center; gap:12px; }
-    .footer-left { flex:1; }
-    .footer-right { display:flex; gap:8px; }
+    .modal-footer { padding: 14px 20px; border-top: 1px solid #f0f0f0; display:flex; align-items:center; gap:12px; justify-content: space-between; flex-wrap: wrap; }
+    .footer-left { flex:1; display: flex; gap: 8px; }
+    .footer-right { display:flex; gap:8px; flex-wrap: wrap; }
 
     .btn-primary {
-      background-color: #14532d; color: #fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:600;
+      background-color: #14532d; color: #fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600; font-size: 0.95rem; transition: all 0.2s ease;
     }
-    .btn-close { background:#f1f5f9; color:#0f172a; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
-    .btn-edit { background:linear-gradient(180deg,#79c267,#54a23b); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
-    .btn-danger { background:linear-gradient(180deg,#f97373,#ef4444); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
-    .btn-edit:hover, .btn-danger:hover, .btn-close:hover { transform: translateY(-1px); }
+    .btn-primary:hover { background-color: #0f4620; transform: translateY(-1px); }
+    .btn-close { background:#f1f5f9; color:#0f172a; border:1px solid #e2e8f0; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight: 500; font-size: 0.95rem; transition: all 0.2s ease; }
+    .btn-close:hover { background: #e2e8f0; }
+    .btn-edit { background:linear-gradient(180deg,#79c267,#54a23b); color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600; font-size: 0.95rem; transition: all 0.2s ease; }
+    .btn-edit:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(84, 162, 59, 0.2); }
+    .btn-danger { background:linear-gradient(180deg,#f97373,#ef4444); color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600; font-size: 0.95rem; transition: all 0.2s ease; }
+    .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); }
     .btn-primary:disabled { opacity:0.6; cursor:not-allowed; }
   `]
 })
@@ -326,10 +653,13 @@ export class AgendaModalComponent {
   @Output() cancelAction = new EventEmitter<void>();
   @Output() deleteAction = new EventEmitter<number>();
   @Output() requestEdit = new EventEmitter<AgendaModalData>();
+  @Output() confirmVisitAction = new EventEmitter<number>();
+  @Output() cancelVisitAction = new EventEmitter<number>();
 
   isOpen = false;
   mode: AgendaModalMode = 'create';
   isSubmitting = false;
+  isConfirming = false;
   showDeleteConfirm = false;
 
   formData: AgendaModalData = {
@@ -366,10 +696,20 @@ export class AgendaModalComponent {
     const titles = {
       create: 'Criar Novo Evento',
       edit: 'Editar Evento',
-      reschedule: 'Reagendar Visita'
-      ,view: 'Detalhes do Evento'
+      reschedule: 'Reagendar Visita',
+      view: 'Detalhes do Evento'
     };
     return titles[this.mode];
+  }
+
+  formatEventType(type: string | null | undefined): string {
+    if (!type) return 'Evento';
+    const types: { [key: string]: string } = {
+      'EVENTO': 'Evento',
+      'VISITA_TECNICA': 'Visita Técnica',
+      'TREINAMENTO': 'Treinamento'
+    };
+    return types[type] || type;
   }
 
   open(mode: AgendaModalMode, initialData?: Partial<AgendaModalData>): void {
@@ -377,6 +717,7 @@ export class AgendaModalComponent {
     this.isOpen = true;
     this.errors = {};
     this.isSubmitting = false;
+    this.isConfirming = false;
     this.formData = {
       mode,
       title: initialData?.title || '',
@@ -437,6 +778,23 @@ export class AgendaModalComponent {
   onRequestEdit(): void {
     // Emit the full current data so parent can open the modal in edit mode with same payload
     this.requestEdit.emit(this.formData);
+  }
+
+  // Emitir confirmação de visita para o componente pai
+  doConfirmVisit(): void {
+    const id = this.formData.referenceId;
+    if (!id) { this.ui.showToast('ID do evento não disponível', 'error'); return; }
+    this.isConfirming = true;
+    this.confirmVisitAction.emit(id);
+    this.isOpen = false;
+  }
+
+  // Emitir cancelamento de visita para o componente pai
+  doCancelVisit(): void {
+    const id = this.formData.referenceId;
+    if (!id) { this.ui.showToast('ID do evento não disponível', 'error'); return; }
+    this.cancelVisitAction.emit(id);
+    this.isOpen = false;
   }
 
   confirm(): void {

@@ -34,6 +34,10 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
   eventos: AgendaResponseDTO[] = [];
   loading = false;
   currentEditingItem: AgendaResponseDTO | null = null;
+  // Export modal state
+  showExportModal: boolean = false;
+  exportStart: string | null = null; // bound to input[type=date] YYYY-MM-DD
+  exportEnd: string | null = null;   // bound to input[type=date] YYYY-MM-DD
   isAdmin = false;
   // quando true, exibe a agenda GLOBAL (todos os técnicos) em vez da própria
   showGlobalAgenda = false;
@@ -54,6 +58,7 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
     select: (info: DateSelectArg) => this.handleDateSelect(info),
     eventDrop: (info: EventDropArg) => this.handleEventDrop(info),
     eventDisplay: 'block',
+    eventContent: (arg) => this.renderCalendarEvent(arg),
     eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short' }
     ,
     // garantir que após cada view ser montada a toolbar seja verificada/ajustada
@@ -81,6 +86,21 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
       // no ActivatedRoute available (tests or non-router context) -> just load eventos
       await this.loadEventos();
     }
+    // bind modal confirm/cancel visit events
+    setTimeout(() => {
+      try {
+        if (this.agendaModal) {
+          this.agendaModal.confirmVisitAction.subscribe((id: number) => {
+            const it = this.eventos.find(e => e.referenceId === id);
+            if (it) this.confirmVisit(it);
+          });
+          this.agendaModal.cancelVisitAction.subscribe((id: number) => {
+            const it = this.eventos.find(e => e.referenceId === id);
+            if (it) this.cancelVisit(it);
+          });
+        }
+      } catch (_) {}
+    }, 200);
   }
 
   ngAfterViewInit(): void {
@@ -273,19 +293,23 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private mapEventoToCalendarEvent(evento: AgendaResponseDTO): any {
-    // Adicionar turno ao título se disponível
+    // Adicionar turno ao título se disponível (texto, sem emoji)
     let title = evento.title;
     if (evento.shift) {
-      const shiftLabel = evento.shift === 'MANHA' ? '🌅 Manhã' : '🌆 Tarde';
-      title = `${title} (${shiftLabel})`;
+      title = `${title} (${evento.shift === 'MANHA' ? 'Manhã' : 'Tarde'})`;
     }
 
+    const baseColor = this.getColorByType(evento.type || 'EVENTO');
+    const color = evento.status === 'REAGENDADO' ? '#f59e0b' : baseColor;
+    const clientDisplay = this.getClientDisplay(evento);
     return {
       id: String(evento.referenceId),
       title: title,
       start: evento.date,
-      backgroundColor: this.getColorByType(evento.type || 'EVENTO'),
-      borderColor: this.getColorByType(evento.type || 'EVENTO'),
+      backgroundColor: color,
+      borderColor: color,
+      classNames: [evento.status ? String(evento.status).toLowerCase() : ''],
+      editable: !(evento.status === 'REAGENDADO' || evento.status === 'CANCELADO'),
       extendedProps: {
         type: evento.type || 'EVENTO',
         description: evento.description,
@@ -295,18 +319,108 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
         sourceVisitId: evento.sourceVisitId,
         nextVisitDate: evento.nextVisitDate,
         nextVisitShift: evento.nextVisitShift,
-        responsibleName: evento.responsibleName || null
+        responsibleName: evento.responsibleName || null,
+        status: evento.status || null,
+        statusDescricao: evento.statusDescricao || null
       }
     };
+  }
+
+  // Formata a string do cliente: Empresa - Unidade - Setor
+  private getClientDisplay(evt: AgendaResponseDTO): string {
+    const parts: string[] = [];
+    if (evt.clientName) parts.push(evt.clientName);
+    if (evt.unitName) parts.push(evt.unitName);
+    if (evt.sectorName) parts.push(evt.sectorName);
+    return parts.join(' - ');
+  }
+
+  // Renderização customizada do evento no FullCalendar (icone + título + cliente/status)
+  renderCalendarEvent(arg: any): { domNodes: HTMLElement[] } {
+    const event = arg.event;
+    const props = event.extendedProps || {};
+    const status: string | null = props.status || null;
+    const statusDescricao: string | null = props.statusDescricao || null;
+    const clientDisplay = props.clientName || '';
+    const type = props.type || 'EVENTO';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'fc-custom-event';
+
+    // Ícone do lado esquerdo
+    const left = document.createElement('div');
+    left.className = 'fc-evt-left';
+    const iconImg = document.createElement('img');
+    iconImg.className = 'fc-evt-icon-img icon-svg';
+    
+    // Escolher ícone baseado no status
+    let iconSrc = 'assets/icons/dot.svg';
+    if (status === 'CONFIRMADO') iconSrc = 'assets/icons/confirm.svg';
+    else if (status === 'A_CONFIRMAR') iconSrc = 'assets/icons/pending.svg';
+    else if (status === 'REAGENDADO') iconSrc = 'assets/icons/rescheduled.svg';
+    else if (status === 'CANCELADO') iconSrc = 'assets/icons/canceled.svg';
+    
+    iconImg.src = iconSrc;
+    iconImg.alt = status || 'status';
+    left.appendChild(iconImg);
+
+    // Conteúdo do lado direito (título + detalhes)
+    const right = document.createElement('div');
+    right.className = 'fc-evt-right';
+    
+    // Título do evento
+    const titleEl = document.createElement('div');
+    titleEl.className = 'fc-evt-title';
+    titleEl.textContent = this.truncateText(event.title || '', 14);
+    right.appendChild(titleEl);
+
+    // Linha de informações secundárias (cliente ou status)
+    if (clientDisplay && status !== 'REAGENDADO') {
+      const subClient = document.createElement('div');
+      subClient.className = 'fc-evt-sub-client';
+      subClient.textContent = this.truncateText(clientDisplay, 16);
+      right.appendChild(subClient);
+    } else if (status === 'REAGENDADO' && statusDescricao) {
+      const sub = document.createElement('div');
+      sub.className = 'fc-evt-sub';
+      sub.textContent = this.truncateText(statusDescricao, 16);
+      right.appendChild(sub);
+    } else if (status === 'A_CONFIRMAR') {
+      const sub = document.createElement('div');
+      sub.className = 'fc-evt-sub';
+      sub.textContent = 'À Confirmar';
+      right.appendChild(sub);
+    }
+
+    wrapper.appendChild(left);
+    wrapper.appendChild(right);
+
+    return { domNodes: [wrapper] };
+  }
+
+  private truncateText(text: string, limit: number): string {
+    if (!text) return '';
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + '...';
   }
 
   private getColorByType(type: string): string {
     const colors: { [key: string]: string } = {
       'EVENTO': '#3b82f6',           // azul
-      'VISITA': '#10b981',           // verde
-      'VISITA_REAGENDADA': '#f59e0b' // amarelo/laranja
+      'VISITA_TECNICA': '#10b981',   // verde
+      'TREINAMENTO': '#06b6d4'       // ciano
     };
     return colors[type] || '#6b7280';
+  }
+
+  formatEventType(type: string | null | undefined): string {
+    if (!type) return 'Evento';
+    const types: { [key: string]: string } = {
+      'EVENTO': 'Evento',
+      'VISITA_TECNICA': 'Visita Técnica',
+      'TREINAMENTO': 'Treinamento'
+    };
+    return types[type] || type;
   }
 
   private handleEventClick(info: EventClickArg): void {
@@ -341,7 +455,7 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private handleEventDrop(info: EventDropArg): void {
     const evento = this.eventos.find(e => e.referenceId === parseInt(info.event.id));
-    if (evento && (evento.type === 'VISITA' || evento.type === 'VISITA_REAGENDADA')) {
+    if (evento && evento.type === 'VISITA_TECNICA') {
       const newDate = info.event.startStr.split('T')[0];
       this.currentEditingItem = evento;
       this.agendaModal?.open('reschedule', {
@@ -504,7 +618,7 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
       });
       return;
     }
-    if (item.type === 'VISITA' || item.type === 'VISITA_REAGENDADA') {
+    if (item.type === 'VISITA_TECNICA') {
       this.agendaModal?.open('reschedule', {
         date: item.date,
         reason: null
@@ -513,9 +627,134 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  // Confirmar uma visita técnica
+  async confirmVisit(item: AgendaResponseDTO): Promise<void> {
+    if (!item || !item.referenceId) return;
+    if (item.status === 'REAGENDADO' || item.status === 'CANCELADO') return;
+    try {
+      this.loading = true;
+      
+      // Visitas técnicas usam endpoint diferente
+      if (item.type === 'VISITA_TECNICA') {
+        await this.agendaService.confirmarVisitaTecnica(item.referenceId);
+      } else {
+        // Eventos manuais usam updateEvento
+        await this.agendaService.updateEvento(item.referenceId, {
+          title: item.title,
+          description: item.description || null,
+          eventDate: item.date,
+          eventType: item.type || 'EVENTO',
+          shift: item.shift || 'MANHA',
+          clientName: item.clientName || null,
+          status: 'CONFIRMADO',
+          statusDescricao: 'Confirmado'
+        });
+      }
+      
+      this.ui.showToast('Visita confirmada', 'success');
+      await this.loadEventos();
+    } catch (e) {
+      console.error('Erro ao confirmar visita', e);
+      this.ui.showToast('Falha ao confirmar visita', 'error');
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  // Cancelar uma visita técnica
+  async cancelVisit(item: AgendaResponseDTO): Promise<void> {
+    if (!item || !item.referenceId) return;
+    if (item.status === 'REAGENDADO' || item.status === 'CANCELADO') return;
+    if (!confirm(`Deseja cancelar a visita "${item.title}" em ${this.formatDateToBrazil(item.date)}?`)) return;
+    try {
+      this.loading = true;
+      await this.agendaService.updateEvento(item.referenceId, {
+        title: item.title,
+        description: item.description || null,
+        eventDate: item.date,
+        eventType: item.type || 'EVENTO',
+        shift: item.shift || 'MANHA',
+        clientName: item.clientName || null,
+        status: 'CANCELADO',
+        statusDescricao: 'Cancelado'
+      });
+      this.ui.showToast('Visita cancelada', 'success');
+      await this.loadEventos();
+    } catch (e) {
+      console.error('Erro ao cancelar visita', e);
+      this.ui.showToast('Falha ao cancelar visita', 'error');
+    } finally {
+      this.loading = false;
+    }
+  }
+
   switchView(mode: 'calendar' | 'list'): void {
     console.log(`Alternando view para: ${mode}, eventos disponíveis:`, this.eventos.length);
     this.viewMode = mode;
+  }
+
+  openExportModal(): void {
+    // default range: últimos 30 dias
+    const now = new Date();
+    const prior = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
+    this.exportStart = prior.toISOString().split('T')[0];
+    this.exportEnd = now.toISOString().split('T')[0];
+    this.showExportModal = true;
+  }
+
+  closeExportModal(): void {
+    this.showExportModal = false;
+  }
+
+  formatDate(fileDate: Date): string {
+    const y = fileDate.getFullYear();
+    const m = String(fileDate.getMonth() + 1).padStart(2, '0');
+    const d = String(fileDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  exportarRelatorio(): void {
+    if (!this.exportStart || !this.exportEnd) {
+      this.ui.showToast('Informe data inicial e final', 'error');
+      return;
+    }
+    try {
+      const dtStart = new Date(this.exportStart + 'T00:00:00');
+      const dtEnd = new Date(this.exportEnd + 'T23:59:59');
+      this.agendaService.exportarRelatorioPdf(dtStart, dtEnd).subscribe({
+        next: (blob: Blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const filename = `Agenda_Visitas_${this.formatDate(new Date())}.pdf`;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+          this.ui.showToast('Download iniciado', 'success');
+          this.closeExportModal();
+        },
+        error: (err) => {
+          console.error('Erro ao baixar PDF', err);
+          this.ui.showToast('Falha ao baixar PDF', 'error');
+        }
+      });
+    } catch (e) {
+      console.error('Erro ao preparar download', e);
+      this.ui.showToast('Erro ao preparar o download', 'error');
+    }
+  }
+
+  getStatusClass(status?: string | null): string {
+    if (!status) return '';
+    switch (status) {
+      case 'REAGENDADO': return 'status-reagendado';
+      case 'A_CONFIRMAR': return 'status-a-confirmar';
+      case 'CONFIRMADO': return 'status-confirmado';
+      case 'CANCELADO': return 'status-cancelado';
+      default: return '';
+    }
   }
 
   // formata string YYYY-MM-DD para DD/MM/YYYY

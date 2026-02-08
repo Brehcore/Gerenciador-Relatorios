@@ -74,7 +74,7 @@
             <h3>Minha Agenda (próximos 5)</h3>
             <div class="agenda-list">
               <div *ngIf="myAgenda && myAgenda.length > 0; else noAgenda">
-                <div class="agenda-item" *ngFor="let ev of myAgenda" [ngClass]="{ 'visita': ev.type === 'VISITA' }">
+                <div class="agenda-item" *ngFor="let ev of myAgenda" [ngClass]="{ 'visita': ev.type === 'VISITA_TECNICA' }">
                   <div class="agenda-date">
                     <div class="dt-day">{{ ev.date.slice(8,10) }}</div>
                     <div class="dt-month">{{ ev.date.slice(5,7) }}</div>

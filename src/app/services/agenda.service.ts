@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { LegacyService } from './legacy.service';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 /**
  * Interface que representa a resposta da API de agenda.
@@ -7,27 +9,26 @@ import { LegacyService } from './legacy.service';
  * Suporta lógica híbrida: Eventos Manuais + Visitas Técnicas Oficiais
  */
 export interface AgendaResponseDTO {
-  title: string;
-  date: string;
-  // type pode ser null vindo do backend, tratar como 'EVENTO' por padrão no frontend
-  type: 'EVENTO' | 'VISITA' | 'VISITA_REAGENDADA' | null;
   referenceId: number;
+  title: string;
+  date: string; // yyyy-MM-dd
+  type: 'EVENTO' | 'TREINAMENTO' | 'VISITA_TECNICA' | null;
   description?: string | null;
-  shift?: 'MANHA' | 'TARDE'; // Turno do evento/visita (agora)
-  
-  // --- Dados Híbridos ---
-  clientName?: string | null;      // Nome da empresa (oficial ou manual)
+  shift?: 'MANHA' | 'TARDE';
+  responsibleName?: string | null;
+  clientName?: string | null;
   unitName?: string | null;
   sectorName?: string | null;
-  
-  // --- Visita Oficial ---
-  sourceVisitId?: number | null;   // Se existir, é uma Visita Técnica Oficial
+
+  // --- NOVOS CAMPOS ---
+  status?: 'CONFIRMADO' | 'A_CONFIRMAR' | 'REAGENDADO' | 'CANCELADO' | null;
+  statusDescricao?: string | null; // Ex: "Reagendado p/ 25/02" ou "Confirmado"
+
+  // --- Campos de visita técnica (compatibilidade)
+  sourceVisitId?: number | null;
   originalVisitDate?: string | null;
-  nextVisitDate?: string | null;   // Data da próxima visita agendada
-  nextVisitShift?: 'MANHA' | 'TARDE'; // Turno da próxima visita agendada
-  
-  // nome do usuário responsável pelo evento (presente no endpoint admin)
-  responsibleName?: string | null;
+  nextVisitDate?: string | null;
+  nextVisitShift?: 'MANHA' | 'TARDE' | null;
 }
 
 /**
@@ -38,6 +39,7 @@ export interface AgendaResponseDTO {
 @Injectable({ providedIn: 'root' })
 export class AgendaService {
   private legacy = inject(LegacyService);
+  private http = inject(HttpClient);
 
   private baseUrl(): string {
     return `${this.legacy.apiBaseUrl}/api/agenda`;
@@ -92,7 +94,7 @@ export class AgendaService {
    * @returns Promise contendo o AgendaResponseDTO do evento atualizado
    * @throws Error se a requisição falhar
    */
-  async updateEvento(id: number | string, payload: { title: string; description?: string | null; eventDate: string; eventType: string; shift?: 'MANHA' | 'TARDE'; clientName?: string | null; }): Promise<AgendaResponseDTO> {
+  async updateEvento(id: number | string, payload: { title: string; description?: string | null; eventDate: string; eventType: string; shift?: 'MANHA' | 'TARDE'; clientName?: string | null; status?: 'CONFIRMADO' | 'A_CONFIRMAR' | 'REAGENDADO' | 'CANCELADO'; statusDescricao?: string | null; }): Promise<AgendaResponseDTO> {
     const url = `${this.baseUrl()}/eventos/${id}`;
     const resp = await fetch(url, { 
       method: 'PUT', 
@@ -126,6 +128,25 @@ export class AgendaService {
       throw new Error(`Falha ao reagendar visita: ${errorText}`);
     }
     return resp.json();
+  }
+
+  /**
+   * Confirma uma visita técnica na agenda.
+   * 
+   * @param visitId Identificador da visita técnica a ser confirmada
+   * @returns Promise vazia (HTTP 200 OK)
+   * @throws Error se a requisição falhar
+   */
+  async confirmarVisitaTecnica(visitId: number | string): Promise<void> {
+    const url = `${this.baseUrl()}/visitas/${visitId}/confirmar`;
+    const resp = await fetch(url, { 
+      method: 'PUT', 
+      headers: this.legacy.authHeaders()
+    });
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      throw new Error(`Falha ao confirmar visita técnica: ${errorText}`);
+    }
   }
 
   /**
@@ -214,6 +235,19 @@ export class AgendaService {
   }
 
   /**
+   * Chama o endpoint que retorna o PDF com o histórico da agenda.
+   * Retorna um Observable<Blob> para permitir subscribe() do componente.
+   */
+  exportarRelatorioPdf(inicio: Date, fim: Date): Observable<Blob> {
+    const start = inicio.toISOString().split('T')[0];
+    const end = fim.toISOString().split('T')[0];
+    const params = new HttpParams().set('startDate', start).set('endDate', end);
+    const headers = new HttpHeaders(this.legacy.authHeaders());
+    const url = `${this.baseUrl()}/export/pdf`;
+    return this.http.get(url, { params, headers, responseType: 'blob' as 'blob' });
+  }
+
+  /**
    * Verifica conflitos GLOBAIS para uma data/turno fornecidos.
    * Backend deve responder 200 OK com corpo texto contendo mensagem de aviso
    * quando houver conflito, ou body vazio / string vazia quando estiver livre.
@@ -238,6 +272,33 @@ export class AgendaService {
       // fallback: se não puder parsear JSON, tentar ler texto
       const text = (await resp.text()).trim();
       return text.length ? text : null;
+    }
+  }
+
+  /**
+   * Confirma o agendamento/visita.
+   * - Para `VISITA_TECNICA` chama o endpoint específico de confirmar visita.
+   * - Para eventos manuais, faz um PUT no recurso de eventos atualizando o status.
+   * Retorna um Observable para o caller decidir subscribe/pipe.
+   */
+  confirmarAgendamento(evento: AgendaResponseDTO) {
+    if (!evento || !evento.referenceId) throw new Error('Evento inválido para confirmação');
+    const headers = new HttpHeaders(this.legacy.authHeaders());
+    if (evento.type === 'VISITA_TECNICA') {
+      const url = `${this.baseUrl()}/visitas/${evento.referenceId}/confirmar`;
+      return this.http.put(url, {}, { headers });
+    } else {
+      const url = `${this.baseUrl()}/eventos/${evento.referenceId}`;
+      const payload = {
+        title: evento.title,
+        description: evento.description || null,
+        eventDate: evento.date,
+        eventType: evento.type || 'EVENTO',
+        shift: evento.shift || 'MANHA',
+        clientName: evento.clientName || null,
+        status: 'CONFIRMADO'
+      };
+      return this.http.put(url, payload, { headers });
     }
   }
 }
