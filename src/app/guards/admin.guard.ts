@@ -14,38 +14,30 @@ export class AdminGuard implements CanActivate {
     state: RouterStateSnapshot
   ): Promise<boolean> {
     try {
-      console.log('[AdminGuard] INICIANDO VERIFICAÇÃO');
+      console.warn('%c[AdminGuard] INICIANDO', 'color:orange;font-weight:bold');
       
-      // Log 1: Verificar localStorage
       const cachedRole = localStorage.getItem('userRole');
-      console.log('[AdminGuard] 1. localStorage.userRole =', cachedRole);
+      console.warn(`%c[AdminGuard] localStorage.userRole: ${cachedRole}`, 'color:blue');
       
-      // Log 2: Verificar token
-      const token = localStorage.getItem('jwtToken');
-      console.log('[AdminGuard] 2. token existe?', !!token);
-      
-      // Usar ensureUserRole que tem múltiplos fallbacks
       const role = await this.legacy.ensureUserRole();
-      console.log('[AdminGuard] 3. ensureUserRole() retornou:', role);
+      console.warn(`%c[AdminGuard] ensureUserRole() retornou: ${role}`, 'color:blue');
       
       const upperRole = (role || '').toUpperCase();
-      console.log('[AdminGuard] 4. upperRole =', upperRole);
-      
       const isAdmin = upperRole === 'ADMIN' || upperRole === 'ROLE_ADMIN';
-      console.log('[AdminGuard] 5. isAdmin (ADMIN ou ROLE_ADMIN)?', isAdmin);
+      
+      console.warn(`%c[AdminGuard] upperRole: ${upperRole} | isAdmin: ${isAdmin}`, 'color:blue');
 
       if (isAdmin) {
-        console.log('[AdminGuard] ✅ ACESSO PERMITIDO');
+        console.warn('%c[AdminGuard] ✅ ACESSO PERMITIDO', 'color:green;font-weight:bold');
         return true;
       }
 
-      // Se não for admin
-      console.log('[AdminGuard] ❌ ACESSO NEGADO - role não é admin');
+      console.warn(`%c[AdminGuard] ❌ ACESSO NEGADO - role ${role} não é admin`, 'color:red;font-weight:bold');
       this.ui.showToast('Acesso negado. Apenas administradores podem acessar esta página.', 'error', 4000);
       this.router.navigate(['/group']);
       return false;
     } catch (err) {
-      console.error('[AdminGuard] ❌ ERRO NA VERIFICAÇÃO:', err);
+      console.error('%c[AdminGuard] ❌ ERRO:', 'color:red;font-weight:bold', err);
       this.ui.showToast('Erro ao verificar permissões.', 'error', 3000);
       this.router.navigate(['/group']);
       return false;
