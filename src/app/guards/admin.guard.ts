@@ -9,6 +9,52 @@ import { LegacyService } from '../services/legacy.service';
 export class AdminGuard implements CanActivate {
   constructor(private router: Router, private ui: UiService, private legacy: LegacyService) {}
 
+  /**
+   * Normaliza uma role removendo prefixo ROLE_ e convertendo para MAIÚSCULO
+   * ROLE_ADMIN → ADMIN
+   * ADMIN → ADMIN
+   */
+  private normalizeRole(role: any): string {
+    if (!role) return '';
+    const roleStr = String(role).toUpperCase().trim();
+    return roleStr.startsWith('ROLE_') ? roleStr.substring(5) : roleStr;
+  }
+
+  /**
+   * Extrai roles do payload JWT de múltiplas formas
+   * Sempre retorna um ARRAY para garantir consistência
+   */
+  private extractRoles(payload: any): string[] {
+    if (!payload) return [];
+    
+    const roles: string[] = [];
+    
+    // Tentar payload.roles (array - formato Spring)
+    if (Array.isArray(payload.roles)) {
+      roles.push(...payload.roles.map((r: any) => this.normalizeRole(r)));
+    }
+    
+    // Tentar payload.role (string única)
+    if (payload.role && typeof payload.role === 'string') {
+      roles.push(this.normalizeRole(payload.role));
+    }
+    
+    // Tentar payload.authorities (array - formato Spring Security)
+    if (Array.isArray(payload.authorities)) {
+      roles.push(...payload.authorities.map((r: any) => this.normalizeRole(r)));
+    }
+    
+    // Remover duplicatas
+    return [...new Set(roles)].filter(r => r.length > 0);
+  }
+
+  /**
+   * Verifica se alguma role contém 'ADMIN'
+   */
+  private hasAdminRole(roles: string[]): boolean {
+    return roles.some(role => role.includes('ADMIN'));
+  }
+
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
@@ -27,60 +73,36 @@ export class AdminGuard implements CanActivate {
       
       // 3. Se payload for null/undefined, retornar falso
       if (!payload) {
-        this.ui.showToast('❌ Token inválido (payload null). Faça login novamente.', 'error', 4000);
+        this.ui.showToast('❌ Token inválido. Faça login novamente.', 'error', 4000);
         this.router.navigate(['/login']);
         return false;
       }
 
-      // 4. Extrair role - tentar múltiplas formas
-      let roleValue: any = null;
-      let foundInField = 'nenhum';
-      
-      // Tentar payload.roles (array)
-      if (Array.isArray(payload.roles) && payload.roles.length > 0) {
-        roleValue = payload.roles[0];
-        foundInField = 'roles[0]';
-      }
-      // Tentar payload.role
-      else if (payload.role) {
-        roleValue = payload.role;
-        foundInField = 'role';
-      }
-      // Tentar payload.authorities (array)
-      else if (Array.isArray(payload.authorities) && payload.authorities.length > 0) {
-        roleValue = payload.authorities[0];
-        foundInField = 'authorities[0]';
-      }
+      // 4. Extrair roles (sempre retorna array)
+      const roles = this.extractRoles(payload);
 
-      // 5. Se não encontrou role, negar acesso
-      if (!roleValue) {
-        this.ui.showToast(`⚠️ Role não encontrado em payload. Campos: roles=${payload.roles}, role=${payload.role}, authorities=${payload.authorities}`, 'warning', 5000);
+      // 5. Se nenhuma role encontrada
+      if (roles.length === 0) {
+        this.ui.showToast('⚠️ Nenhuma role encontrada no token.', 'warning', 4000);
         this.router.navigate(['/group']);
         return false;
       }
 
-      // 6. Converter para string e verificar
-      const roleStr = String(roleValue);
-      const roleUpper = roleStr.toUpperCase();
-      
-      // DEBUG: mostrar qual role foi encontrado
-      this.ui.showToast(`🔍 Role encontrado em ${foundInField}: "${roleStr}" → "${roleUpper}"`, 'info', 3000);
-      
-      // 7. Verificar se contém 'ADMIN'
-      const isAdmin = roleUpper.includes('ADMIN');
+      // 6. Verificar se tem role ADMIN
+      const isAdmin = this.hasAdminRole(roles);
 
       if (isAdmin) {
-        this.ui.showToast(`✅ Acesso ADMIN garantido!`, 'success', 2000);
         return true;
       }
 
-      // 8. Negar acesso
-      this.ui.showToast(`❌ Role "${roleUpper}" não contém 'ADMIN'. Acesso negado.`, 'warning', 4000);
+      // 7. Negar acesso
+      this.ui.showToast(`❌ Acesso negado. Apenas administradores podem acessar.`, 'error', 4000);
       this.router.navigate(['/group']);
       return false;
 
     } catch (err) {
-      this.ui.showToast(`❌ Erro inesperado: ${err}`, 'error', 4000);
+      console.error('[AdminGuard] Erro:', err);
+      this.ui.showToast('❌ Erro ao verificar permissões.', 'error', 4000);
       this.router.navigate(['/group']);
       return false;
     }
