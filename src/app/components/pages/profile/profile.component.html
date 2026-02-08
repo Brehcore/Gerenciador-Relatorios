@@ -100,7 +100,7 @@
             Mínimo 8 caracteres ({{ newPassword.length }}/8)
           </small>
           <small *ngIf="newPassword.length >= 8" class="form-hint success">
-            Comprimento de senha válido <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
+            Comprimento de senha válido <img src="assets/icons/confirm.svg" class="icon-svg icon-inline" alt="ok"/>
           </small>
         </div>
 
@@ -117,7 +117,7 @@
             As senhas não conferem
           </small>
           <small *ngIf="confirmPassword && newPassword === confirmPassword && newPassword.length >= 8" class="form-hint success">
-            Senhas coincidem <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
+            Senhas coincidem <img src="assets/icons/confirm.svg" class="icon-svg icon-inline" alt="ok"/>
           </small>
         </div>
       </div>
@@ -168,7 +168,7 @@
             Email inválido
           </small>
           <small *ngIf="newEmail.length > 0 && isValidEmail(newEmail)" class="form-hint success">
-            Email válido <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
+            Email válido <img src="assets/icons/confirm.svg" class="icon-svg icon-inline" alt="ok"/>
           </small>
         </div>
 
@@ -185,7 +185,7 @@
             Os emails não conferem
           </small>
           <small *ngIf="confirmEmail && newEmail === confirmEmail && isValidEmail(newEmail)" class="form-hint success">
-            Emails coincidem <img src="assets/icons/confirm.svg" class="icon-svg" style="width:14px;height:14px;vertical-align:middle" alt="ok"/>
+            Emails coincidem <img src="assets/icons/confirm.svg" class="icon-svg icon-inline" alt="ok"/>
           </small>
         </div>
 

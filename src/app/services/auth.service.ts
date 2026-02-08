@@ -4,7 +4,6 @@ import { firstValueFrom } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private passwordResetRequired = false;
   private userInfo: any = null;
 
   constructor(private http: HttpClient) {
@@ -12,10 +11,6 @@ export class AuthService {
   }
 
   private loadFromStorage() {
-    const stored = localStorage.getItem('passwordResetRequired');
-    if (stored) {
-      this.passwordResetRequired = JSON.parse(stored);
-    }
     const userStored = localStorage.getItem('userInfo');
     if (userStored) {
       this.userInfo = JSON.parse(userStored);
@@ -35,13 +30,9 @@ export class AuthService {
         localStorage.setItem('jwtToken', response.token);
         localStorage.setItem('userRole', response.role);
         
-        // Armazenar informações do usuário incluindo passwordResetRequired
+        // Armazenar informações do usuário
         this.userInfo = response;
         localStorage.setItem('userInfo', JSON.stringify(response));
-        
-        // Armazenar flag de reset de senha obrigatório
-        this.passwordResetRequired = response.passwordResetRequired || false;
-        localStorage.setItem('passwordResetRequired', JSON.stringify(this.passwordResetRequired));
       }
 
       return response;
@@ -51,19 +42,6 @@ export class AuthService {
     }
   }
 
-  isPasswordResetRequired(): boolean {
-    // Comparação estrita: apenas true é true
-    if (this.passwordResetRequired === true) return true;
-    // Fallback: ver localStorage
-    const stored = localStorage.getItem('passwordResetRequired');
-    return stored ? JSON.parse(stored) === true : false;
-  }
-
-  setPasswordResetRequired(value: boolean) {
-    this.passwordResetRequired = value;
-    localStorage.setItem('passwordResetRequired', JSON.stringify(value));
-  }
-
   getUserInfo(): any {
     return this.userInfo;
   }
@@ -71,9 +49,7 @@ export class AuthService {
   logout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('userRole');
-    localStorage.removeItem('passwordResetRequired');
     localStorage.removeItem('userInfo');
-    this.passwordResetRequired = false;
     this.userInfo = null;
   }
 }

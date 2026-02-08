@@ -170,8 +170,6 @@ export class ProfileComponent implements OnInit {
 
       const data = await resp.json();
       this.ui.showToast('Senha alterada com sucesso!', 'success');
-      // Atualizar flag de reset obrigatório se foi mudado
-      this.auth.setPasswordResetRequired(false);
       this.closeChangePasswordModal();
     } catch (err: any) {
       const msg = err?.message || 'Erro ao alterar senha';
@@ -238,8 +236,6 @@ export class ProfileComponent implements OnInit {
       if (this.profile) {
         this.profile.email = this.newEmail;
       }
-      // Atualizar flag de reset obrigatório
-      this.auth.setPasswordResetRequired(false);
       this.closeChangeEmailModal();
     } catch (err: any) {
       const msg = err?.message || 'Erro ao alterar e-mail';

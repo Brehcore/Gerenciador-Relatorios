@@ -25,12 +25,6 @@ export class ResetSenhaObrigatóriaComponent implements OnInit {
   userEmail = '';
 
   ngOnInit() {
-    // Se não precisa resetar senha, redireciona para dashboard
-    if (!this.auth.isPasswordResetRequired()) {
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
     // Obter email do usuário logado
     const userInfo = this.auth.getUserInfo();
     this.userEmail = userInfo?.email || 'Usuário';
@@ -84,9 +78,6 @@ export class ResetSenhaObrigatóriaComponent implements OnInit {
 
       const data = await resp.json();
       this.ui.showToast('Senha definida com sucesso!', 'success');
-      
-      // Atualizar flag de reset obrigatório
-      this.auth.setPasswordResetRequired(false);
       
       // Redirecionar para dashboard
       this.router.navigate(['/dashboard']);

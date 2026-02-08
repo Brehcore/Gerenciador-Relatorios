@@ -178,7 +178,7 @@
             <button *ngIf="isAdmin" type="button" class="btn btn-primary" (click)="openNewClientModal()" title="Criar novo cliente">
               ➕ Novo Cliente
             </button>
-            <div *ngIf="!isAdmin" style="font-size:0.95rem;color:#475569;">Apenas leitura disponível para seu perfil.</div>
+            <div *ngIf="!isAdmin" class="readonly-note">Apenas leitura disponível para seu perfil.</div>
           </div>
         </div>
 

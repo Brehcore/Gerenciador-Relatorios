@@ -319,3 +319,9 @@
 
 /* estilos mínimos para profile */
 .main-content { padding: 1rem; }
+
+.icon-inline {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+}

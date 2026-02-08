@@ -1822,3 +1822,8 @@ label.btn.disabled {
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
+
+.readonly-note {
+  font-size: 0.95rem;
+  color: #475569;
+}

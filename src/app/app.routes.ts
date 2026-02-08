@@ -16,27 +16,26 @@ import { CertificateComponent } from './components/pages/certificate/certificate
 import { ChangePasswordComponent } from './components/pages/change-password/change-password.component';
 import { AdminGuard } from './guards/admin.guard';
 import { ResetSenhaObrigatóriaComponent } from './components/pages/reset-senha-obrigatoria/reset-senha-obrigatoria.component';
-import { requirePasswordResetGuard, blockUntilPasswordResetGuard } from './guards/password-reset.guard';
 // Forms and ChangePassword pages are not yet migrated; remove their imports for now
 
 
 export const routes: Routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
     { path: 'login', component: LoginComponent },
-    { path: 'reset-senha-obrigatoria', component: ResetSenhaObrigatóriaComponent, canActivate: [requirePasswordResetGuard] },
-	{ path: 'dashboard', component: DashboardComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'group', component: GroupComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'report', component: ReportComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'agenda', component: AgendaComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'documents', component: DocumentsComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'profile', component: ProfileComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'certificado-digital', component: CertificateComponent, canActivate: [blockUntilPasswordResetGuard] },
+    { path: 'reset-senha-obrigatoria', component: ResetSenhaObrigatóriaComponent },
+	{ path: 'dashboard', component: DashboardComponent },
+	{ path: 'group', component: GroupComponent },
+	{ path: 'report', component: ReportComponent },
+	{ path: 'agenda', component: AgendaComponent },
+	{ path: 'documents', component: DocumentsComponent },
+	{ path: 'profile', component: ProfileComponent },
+	{ path: 'certificado-digital', component: CertificateComponent },
 	// rotas forms/change-password removidas temporariamente até migração completa
-	{ path: 'admin', component: AdminComponent, canActivate: [blockUntilPasswordResetGuard, AdminGuard] },
-	{ path: 'cadastros', component: CadastrosComponent, canActivate: [UserGuard, blockUntilPasswordResetGuard] },
-	{ path: 'aep', component: AepComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'checklist', component: ChecklistComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'checklist/edit/:id', component: ChecklistComponent, canActivate: [blockUntilPasswordResetGuard] },
-	{ path: 'change-password', component: ChangePasswordComponent, canActivate: [blockUntilPasswordResetGuard] },
+	{ path: 'admin', component: AdminComponent, canActivate: [AdminGuard] },
+	{ path: 'cadastros', component: CadastrosComponent, canActivate: [UserGuard] },
+	{ path: 'aep', component: AepComponent },
+	{ path: 'checklist', component: ChecklistComponent },
+	{ path: 'checklist/edit/:id', component: ChecklistComponent },
+	{ path: 'change-password', component: ChangePasswordComponent },
 	{ path: '**', redirectTo: '' }
 ];
