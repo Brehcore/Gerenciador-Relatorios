@@ -139,8 +139,10 @@ export class AdminComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    const role = this.legacy.getUserRole();
-    this.isAdmin = !!(role && String(role).toUpperCase() === 'ADMIN');
+    const role = this.legacy.getUserRole() || '';
+    const upperRole = String(role).toUpperCase();
+    // Aceitar AMBOS os formatos de role (ADMIN ou ROLE_ADMIN)
+    this.isAdmin = upperRole === 'ADMIN' || upperRole === 'ROLE_ADMIN';
     // Allow non-admin authenticated users to view clients section. Load only the
     // datasets appropriate for the user's role.
     if (this.isAdmin) {

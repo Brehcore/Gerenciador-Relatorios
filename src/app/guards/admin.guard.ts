@@ -16,9 +16,9 @@ export class AdminGuard implements CanActivate {
       const userRole = localStorage.getItem('userRole') || '';
       const role = userRole.toUpperCase();
 
-      // Apenas usuários com role ADMIN podem acessar
+      // Apenas usuários com role ADMIN podem acessar (aceita AMBOS os formatos)
       if (role === 'ADMIN' || role === 'ROLE_ADMIN') {
-      return true;
+        return true;
       }
 
       // Se não for admin, mostrar toast e redirecionar
