@@ -17,8 +17,8 @@ export class AdminGuard implements CanActivate {
       const role = userRole.toUpperCase();
 
       // Apenas usuários com role ADMIN podem acessar
-      if (role === 'ADMIN') {
-        return true;
+      if (role === 'ADMIN' || role === 'ROLE_ADMIN') {
+      return true;
       }
 
       // Se não for admin, mostrar toast e redirecionar
