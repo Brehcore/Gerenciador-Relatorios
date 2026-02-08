@@ -9,33 +9,20 @@ import { LegacyService } from '../services/legacy.service';
 export class AdminGuard implements CanActivate {
   constructor(private router: Router, private ui: UiService, private legacy: LegacyService) {}
 
-  canActivate(
+  async canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
-  ): boolean {
+  ): Promise<boolean> {
     try {
-      // Primeiro, tentar obter do localStorage
-      let userRole = localStorage.getItem('userRole') || '';
+      // Usar ensureUserRole que tem múltiplos fallbacks (como UserGuard)
+      // Isso garante que o role será extraído corretamente mesmo em race conditions
+      const role = await this.legacy.ensureUserRole();
+      const upperRole = (role || '').toUpperCase();
       
-      // Se não encontrar no localStorage, tentar extrair do token JWT
-      if (!userRole) {
-        const token = localStorage.getItem('jwtToken');
-        userRole = this.legacy.extractRoleFromToken(token) || '';
-        // Se conseguir extrair do token, salvar no localStorage para próximas vezes
-        if (userRole) {
-          try {
-            localStorage.setItem('userRole', userRole);
-          } catch (_) {}
-        }
-      }
-      
-      const role = userRole.toUpperCase();
-      
-      // Debug log (remover em produção se necessário)
-      console.log('[AdminGuard] Verificando acesso - userRole:', userRole, '- role upper:', role);
+      console.log('[AdminGuard] Role obtido:', role, '| Upper:', upperRole);
 
-      // Apenas usuários com role ADMIN podem acessar (aceita AMBOS os formatos)
-      if (role === 'ADMIN' || role === 'ROLE_ADMIN') {
+      // Aceitar ambos os formatos (ADMIN ou ROLE_ADMIN)
+      if (upperRole === 'ADMIN' || upperRole === 'ROLE_ADMIN') {
         return true;
       }
 
