@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Router, CanDeactivate, CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { Observable } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { UiService } from '../services/ui.service';
 
 @Injectable({ providedIn: 'root' })
 export class PasswordResetGuard implements CanDeactivate<any> {
@@ -34,9 +35,11 @@ export const requirePasswordResetGuard: CanActivateFn = (route: ActivatedRouteSn
 export const blockUntilPasswordResetGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => {
   const authService = inject(AuthService);
   const router = inject(Router);
+  const uiService = inject(UiService);
 
   // Se precisa resetar a senha, bloqueia acesso a essa rota
   if (authService.isPasswordResetRequired()) {
+    uiService.showToast('⚠️ Você precisa resetar sua senha antes de acessar esta página.', 'warning', 4000);
     router.navigate(['/reset-senha-obrigatoria']);
     return false;
   }
