@@ -5,7 +5,7 @@
         <div class="meta-top">
           <div>
             <h2 class="profile-name">{{ profile?.name || '-' }}</h2>
-            <div class="profile-role">{{ profile?.role === 'ADMIN' ? 'Administrador' : 'Usuário' }}</div>
+            <div class="profile-role">{{ isAdmin ? 'Administrador' : 'Usuário' }}</div>
           </div>
           <div class="profile-actions-buttons">
             <button type="button" class="btn-change-password" (click)="openChangePasswordModal()" title="Alterar senha">
@@ -23,7 +23,7 @@
       <div class="info-grid">
         <div class="info-card">
           <div class="info-label"><img src="assets/icons/user.svg" class="icon-svg" alt="Perfil"/> Perfil</div>
-          <div class="info-value">{{ profile?.role === 'ADMIN' ? 'Administrador' : 'Usuário' }}</div>
+          <div class="info-value">{{ isAdmin ? 'Administrador' : 'Usuário' }}</div>
         </div>
         <div class="info-card">
           <div class="info-label"><img src="assets/icons/mail.svg" class="icon-svg" alt="Email"/> Email</div>

@@ -125,16 +125,20 @@ export class NavbarComponent implements OnInit, OnDestroy {
       this.name = me.name || '';
       this.role = me.especialidade || me.role || '';
       this.initials = (me.name || '?').split(/\s+/).slice(0,2).map((p:any)=>p[0]?.toUpperCase()||'').join('');
-      this.isAdmin = String(me.role || '').toUpperCase() === 'ADMIN';
-      this.isUser = String(me.role || '').toUpperCase() === 'USER';
+      const upperRole = String(me.role || '').toUpperCase();
+      // Aceitar AMBOS os formatos
+      this.isAdmin = upperRole === 'ADMIN' || upperRole === 'ROLE_ADMIN';
+      this.isUser = upperRole === 'USER' || upperRole === 'ROLE_USER';
     } else {
       const r = this.legacy.getUserRole() || localStorage.getItem('userRole') || '';
       this.role = r || '';
       const candidate = localStorage.getItem('loggedInUserEmail') || '';
       this.name = candidate || '--';
       this.initials = (this.name || '?').split(/\s+/).slice(0,2).map((p:any)=>p[0]?.toUpperCase()||'').join('');
-      this.isAdmin = String(r).toUpperCase() === 'ADMIN';
-      this.isUser = String(r).toUpperCase() === 'USER';
+      const upperR = String(r).toUpperCase();
+      // Aceitar AMBOS os formatos
+      this.isAdmin = upperR === 'ADMIN' || upperR === 'ROLE_ADMIN';
+      this.isUser = upperR === 'USER' || upperR === 'ROLE_USER';
     }
   }
 

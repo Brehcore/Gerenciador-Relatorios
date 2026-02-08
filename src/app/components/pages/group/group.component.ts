@@ -30,6 +30,7 @@ export class GroupComponent implements OnInit {
   pdfModalItem: any = null;
   // Perfil do usuário logado
   userProfile: any = null;
+  isUserAdmin = false;
 
   // Password reset modal
   showResetPasswordModal = false;
@@ -62,13 +63,22 @@ export class GroupComponent implements OnInit {
     }, 100);
     // carregar próximos eventos da agenda (somente para usuários não-admin)
     setTimeout(() => {
-      try { if (this.userProfile?.role !== 'ADMIN') this.loadUpcomingEvents(); } catch (e) { console.warn('loadUpcomingEvents init failed', e); }
+      try { 
+        const role = (this.userProfile?.role || '').toUpperCase();
+        // Não carregar eventos se for ADMIN ou ROLE_ADMIN
+        if (role !== 'ADMIN' && role !== 'ROLE_ADMIN') {
+          this.loadUpcomingEvents();
+        }
+      } catch (e) { console.warn('loadUpcomingEvents init failed', e); }
     }, 120);
   }
 
   async loadUserProfile() {
     try {
       this.userProfile = await this.legacy.fetchUserProfile();
+      // Verificar se é admin (aceita ambos os formatos)
+      const role = (this.userProfile?.role || '').toUpperCase();
+      this.isUserAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN';
     } catch (e) {
       console.warn('loadUserProfile error', e);
     }

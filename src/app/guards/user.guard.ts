@@ -11,7 +11,8 @@ export class UserGuard implements CanActivate {
     try {
       const role = await this.legacy.ensureUserRole();
       const up = (role || '').toString().toUpperCase();
-      if (up === 'USER') return true;
+      // Aceitar AMBOS os formatos (USER ou ROLE_USER)
+      if (up === 'USER' || up === 'ROLE_USER') return true;
 
       this.ui.showToast('Acesso negado. Apenas técnicos (USER) podem acessar esta página.', 'error', 4000);
       this.router.navigate(['/group']);

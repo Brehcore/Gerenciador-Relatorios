@@ -79,7 +79,7 @@
                     <td class="user-name">{{u.name}}</td>
                     <td class="user-email">{{u.email}}</td>
                     <td>
-                      <span class="badge" [class.badge-admin]="u.role==='ADMIN'" [class.badge-user]="u.role==='USER'">
+                      <span class="badge" [class.badge-admin]="isRoleAdmin(u.role)" [class.badge-user]="isRoleUser(u.role)">
                         {{u.role || 'USER'}}
                       </span>
                     </td>

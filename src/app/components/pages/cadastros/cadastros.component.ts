@@ -99,7 +99,9 @@ export class CadastrosComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     const role = this.legacy.getUserRole() || '';
-    this.isUser = String(role).toUpperCase() === 'USER';
+    const upperRole = String(role).toUpperCase();
+    // Aceitar AMBOS os formatos de role (USER ou ROLE_USER)
+    this.isUser = upperRole === 'USER' || upperRole === 'ROLE_USER';
     // debounce CNPJ search and fetch company name
     this.cnpjSearchSubject.pipe(debounceTime(700), takeUntil(this.destroy$)).subscribe(c => {
       this.fetchCnpjData(c);

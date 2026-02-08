@@ -199,7 +199,9 @@ export class AgendaComponent implements OnInit, AfterViewInit, OnDestroy {
       // Se o usuário for ADMIN, carregar todos os eventos do sistema
       let role: string | null = null;
       try { role = await this.legacy.ensureUserRole(); } catch (_) { role = this.legacy.getUserRole(); }
-      this.isAdmin = !!(role && role.toUpperCase() === 'ADMIN');
+      const upperRole = (role || '').toUpperCase();
+      // Aceitar AMBOS os formatos (ADMIN ou ROLE_ADMIN)
+      this.isAdmin = upperRole === 'ADMIN' || upperRole === 'ROLE_ADMIN';
 
       // If responsible filter present, prefer that
       if (this.queryResponsible && String(this.queryResponsible).trim()) {

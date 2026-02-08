@@ -20,6 +20,7 @@ export class ProfileComponent implements OnInit {
 
   // dados do perfil
   profile: any = null;
+  isAdmin = false;
   hasCertificate = false;
   certificateValidity: string | null = null;
 
@@ -39,6 +40,9 @@ export class ProfileComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     this.profile = await this.legacy.fetchUserProfile().catch(()=>null) || {};
+    // Verificar se é admin (aceita ambos os formatos)
+    const role = (this.profile?.role || '').toUpperCase();
+    this.isAdmin = role === 'ADMIN' || role === 'ROLE_ADMIN';
     // Load certificate info
     this.hasCertificate = !!this.profile?.hasCertificate;
     this.certificateValidity = this.profile?.certificateValidity || null;

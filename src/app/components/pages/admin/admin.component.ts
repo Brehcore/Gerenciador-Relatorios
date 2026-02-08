@@ -296,6 +296,19 @@ export class AdminComponent implements OnInit, OnDestroy {
     return pages;
   }
 
+  // Métodos helper para validar roles (aceita ambos os formatos)
+  isRoleAdmin(role: string | undefined): boolean {
+    if (!role) return false;
+    const upper = String(role).toUpperCase();
+    return upper === 'ADMIN' || upper === 'ROLE_ADMIN';
+  }
+
+  isRoleUser(role: string | undefined): boolean {
+    if (!role) return false;
+    const upper = String(role).toUpperCase();
+    return upper === 'USER' || upper === 'ROLE_USER';
+  }
+
   async loadClients() {
     this.loadingClients = true;
     try {

@@ -27,7 +27,7 @@
 		</div>
 
 		<!-- Próximos eventos / visitas (Agenda) - Oculto para ADMIN -->
-		<div class="upcoming-section" *ngIf="userProfile?.role !== 'ADMIN'">
+		<div class="upcoming-section" *ngIf="!isUserAdmin">
 			<h2>Próximos eventos / visitas</h2>
 			<div *ngIf="loadingUpcoming" class="small-muted">Carregando próximos eventos...</div>
 			<div *ngIf="!loadingUpcoming && (upcomingEventsAll.length===0)" class="small-muted">Nenhum evento agendado.</div>
