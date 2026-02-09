@@ -44,11 +44,15 @@ export class UserGuard implements CanActivate {
     return [...new Set(roles)].filter(r => r.length > 0);
   }
 
-  /**
-   * Verifica se alguma role contém 'USER'
+/**
+   * Verifica se é USER ou ADMIN (Admins também podem acessar rotas de User)
    */
   private hasUserRole(roles: string[]): boolean {
-    return roles.some(role => role.includes('USER'));
+    // Normalizamos para garantir, mas a verificação agora aceita ambos
+    return roles.some(role => 
+      role.toUpperCase().includes('USER') || 
+      role.toUpperCase().includes('ADMIN')
+    );
   }
 
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
