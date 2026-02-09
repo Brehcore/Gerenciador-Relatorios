@@ -1,16 +1,19 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
+import { isPlatformBrowser } from '@angular/common';
 import { UiService } from '../services/ui.service';
-import { LegacyService } from '../services/legacy.service';
 
 @Injectable({ providedIn: 'root' })
 export class UserGuard implements CanActivate {
-  constructor(private router: Router, private ui: UiService, private legacy: LegacyService) {}
+  private platformId = inject(PLATFORM_ID);
+  constructor(private router: Router, private ui: UiService) {}
+
+  private isBrowser(): boolean {
+    return isPlatformBrowser(this.platformId);
+  }
 
   /**
    * Normaliza uma role removendo prefixo ROLE_ e convertendo para MAIÚSCULO
-   * ROLE_USER → USER
-   * USER → USER
    */
   private normalizeRole(role: any): string {
     if (!role) return '';
@@ -20,29 +23,24 @@ export class UserGuard implements CanActivate {
 
   /**
    * Extrai roles do payload JWT de múltiplas formas
-   * Sempre retorna um ARRAY para garantir consistência
    */
   private extractRoles(payload: any): string[] {
     if (!payload) return [];
     
     const roles: string[] = [];
     
-    // Tentar payload.roles (array - formato Spring)
     if (Array.isArray(payload.roles)) {
       roles.push(...payload.roles.map((r: any) => this.normalizeRole(r)));
     }
     
-    // Tentar payload.role (string única)
     if (payload.role && typeof payload.role === 'string') {
       roles.push(this.normalizeRole(payload.role));
     }
     
-    // Tentar payload.authorities (array - formato Spring Security)
     if (Array.isArray(payload.authorities)) {
       roles.push(...payload.authorities.map((r: any) => this.normalizeRole(r)));
     }
     
-    // Remover duplicatas
     return [...new Set(roles)].filter(r => r.length > 0);
   }
 
@@ -54,6 +52,11 @@ export class UserGuard implements CanActivate {
   }
 
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
+    // ✅ SSR SEGURO: Servidor não valida, só browser faz
+    if (!this.isBrowser()) {
+      return true;
+    }
+
     try {
       // 1. Verificar se tem token
       const token = localStorage.getItem('jwtToken');
@@ -74,9 +77,8 @@ export class UserGuard implements CanActivate {
         return false;
       }
       
-      // 3. Se payload for null/undefined, retornar falso
       if (!payload) {
-        this.ui.showToast('❌ Token inválido. Faça login novamente.', 'error', 4000);
+        this.ui.showToast('❌ Token inválido.', 'error', 4000);
         this.router.navigate(['/login']);
         return false;
       }

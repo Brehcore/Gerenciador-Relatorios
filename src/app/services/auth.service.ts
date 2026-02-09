@@ -1,20 +1,31 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { PLATFORM_ID, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private platformId = inject(PLATFORM_ID);
   private userInfo: any = null;
 
   constructor(private http: HttpClient) {
     this.loadFromStorage();
   }
 
+  private isBrowser(): boolean {
+    return isPlatformBrowser(this.platformId);
+  }
+
   private loadFromStorage() {
-    const userStored = localStorage.getItem('userInfo');
-    if (userStored) {
-      this.userInfo = JSON.parse(userStored);
-    }
+    if (!this.isBrowser()) return; // No SSR, não tenta acessar localStorage
+    
+    try {
+      const userStored = localStorage.getItem('userInfo');
+      if (userStored) {
+        this.userInfo = JSON.parse(userStored);
+      }
+    } catch (_) {}
   }
 
   async login(email: string, password: string) {
@@ -26,13 +37,17 @@ export class AuthService {
       console.log('[AuthService] Resposta do login:', response);
 
       if (response && response.token) {
-        // O AuthInterceptor e o logout esperam a chave 'jwtToken'
-        localStorage.setItem('jwtToken', response.token);
-        localStorage.setItem('userRole', response.role);
+        // Armazenar apenas se estiver no browser
+        if (this.isBrowser()) {
+          try {
+            localStorage.setItem('jwtToken', response.token);
+            localStorage.setItem('userRole', response.role);
+            localStorage.setItem('userInfo', JSON.stringify(response));
+          } catch (_) {}
+        }
         
-        // Armazenar informações do usuário
+        // Armazenar também em memória
         this.userInfo = response;
-        localStorage.setItem('userInfo', JSON.stringify(response));
       }
 
       return response;
@@ -46,10 +61,23 @@ export class AuthService {
     return this.userInfo;
   }
 
+  getToken(): string | null {
+    if (!this.isBrowser()) return null;
+    try {
+      return localStorage.getItem('jwtToken');
+    } catch (_) {
+      return null;
+    }
+  }
+
   logout() {
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userInfo');
+    if (this.isBrowser()) {
+      try {
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userInfo');
+      } catch (_) {}
+    }
     this.userInfo = null;
   }
 }
