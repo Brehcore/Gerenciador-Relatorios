@@ -1,10 +1,9 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
-import { CommonModule, NgIf } from '@angular/common';
+import { CommonModule, NgIf, isPlatformBrowser } from '@angular/common';
 import { HeaderComponent } from './components/shared/header/header.component';
 import { NavbarComponent } from './components/shared/navbar/navbar.component';
 import { FooterComponent } from './components/shared/footer/footer.component';
-import { LegacyService } from './services/legacy.service';
 
 @Component({
   standalone: true,
@@ -16,7 +15,11 @@ import { LegacyService } from './services/legacy.service';
 export class App {
   protected readonly title = signal('frontend');
   private router = inject(Router);
-  private legacy = inject(LegacyService);
+  private platformId = inject(PLATFORM_ID);
+  
+  private isBrowser(): boolean {
+    return isPlatformBrowser(this.platformId);
+  }
   
   ngOnInit() {
     // observar rota para aplicar comportamento do footer (fixo apenas na página de login)
@@ -57,20 +60,23 @@ export class App {
       });
     }
 
-    // se não autenticado, garanta que navegue para login
-    try {
-      const token = localStorage.getItem('jwtToken');
-      const current = window.location.pathname || window.location.hash || '';
-      if (!token) {
-        // se não estiver já na rota de login, redireciona
-        if (!current.includes('/login') && !(window.location.hash||'').includes('login')) {
-          try { this.router.navigate(['/login']); } catch(_) { window.location.href = '/#/login'; }
+    // ✅ APENAS NO BROWSER: verificar token e redirecionar se necessário
+    if (this.isBrowser()) {
+      try {
+        const token = localStorage.getItem('jwtToken');
+        const current = window.location.pathname || window.location.hash || '';
+        if (!token) {
+          // se não estiver já na rota de login, redireciona
+          if (!current.includes('/login') && !(window.location.hash||'').includes('login')) {
+            try { this.router.navigate(['/login']); } catch(_) { window.location.href = '/#/login'; }
+          }
         }
-      }
-    } catch(_) {}
+      } catch(_) {}
+    }
   }
 
   isAuthenticated(): boolean {
+    if (!this.isBrowser()) return false; // No SSR, sempre não autenticado
     try { return !!localStorage.getItem('jwtToken'); } catch(_) { return false; }
   }
 }

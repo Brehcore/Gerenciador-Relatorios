@@ -75,53 +75,24 @@ export class LoginComponent implements OnInit {
       return;
     }
     this.loading = true;
-  this.errorMessage = '';
+    this.errorMessage = '';
     try {
       const resp = await this.auth.login(this.email, this.password);
-      // Resp pode ser o objeto retornado pelo ApiService
-      const data: any = resp || {};
-      // se resp contiver token e email
-      if (data.token) {
-        try { localStorage.setItem('jwtToken', data.token); } catch(_) {}
-      }
-      if (data.email) {
-        try { localStorage.setItem('loggedInUserEmail', data.email); } catch(_) {}
-      } else {
-        // fallback: gravar email do formulário
-        try { localStorage.setItem('loggedInUserEmail', this.email); } catch(_) {}
-      }
-
-      // salvar role se backend enviou
-      if (data && data.role) {
-        try { localStorage.setItem('userRole', data.role); } catch(_) {}
-      }
-
-      // tenta extrair role do token
-      try {
-        const token = data.token || localStorage.getItem('jwtToken');
-        const role = this.legacy.extractRoleFromToken(token || null) || (data && data.role) || (data && data.roles && data.roles[0]);
-        if (role) try { localStorage.setItem('userRole', role); } catch(_) {}
-      } catch (e) {
-        console.warn('Não foi possível extrair role do token', e);
-      }
-
-      // fallback: se ainda não houver role, invoca ensureUserRole()
-      if (!localStorage.getItem('userRole')) {
-        try { await this.legacy.ensureUserRole(); } catch(_) {}
-      }
-
-      this.ui.showToast('Login realizado com sucesso', 'success');
-  this.errorMessage = '';
-
+      // AuthService.login() já cuida de salvar token em localStorage
+      // Aqui só confiamos que foi salvo corretamente
+      
       // Verificar se passwordResetRequired é true
-      if (data && data.passwordResetRequired === true) {
-        this.userEmailForReset = data.email || this.email;
+      if (resp && resp.passwordResetRequired === true) {
+        this.userEmailForReset = resp.email || this.email;
         this.showPasswordResetRequiredModal = true;
         // Não navegar ainda - aguardar ação do usuário no modal
         return;
       }
 
-      // navegar para a página principal (group) — manter comportamento do legacy
+      this.ui.showToast('Login realizado com sucesso', 'success');
+      this.errorMessage = '';
+
+      // navegar para a página principal (group)
       try { this.router.navigate(['/group']); } catch(_) { window.location.href = '/'; }
     } catch (err: any) {
       let msg = 'Erro ao efetuar login';
@@ -137,8 +108,8 @@ export class LoginComponent implements OnInit {
           msg = err;
         }
       } catch (_) {}
-  this.errorMessage = msg;
-  this.ui.showToast(msg, 'error');
+      this.errorMessage = msg;
+      this.ui.showToast(msg, 'error');
       console.error('login error', err);
     } finally {
       this.loading = false;

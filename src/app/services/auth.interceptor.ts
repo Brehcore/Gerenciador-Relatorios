@@ -1,7 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor, HttpErrorResponse, HttpResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import { isPlatformBrowser } from '@angular/common';
 import { UiService } from './ui.service';
 import { Router } from '@angular/router';
 
@@ -9,9 +10,20 @@ import { Router } from '@angular/router';
 export class AuthInterceptor implements HttpInterceptor {
   private ui = inject(UiService);
   private router = inject(Router);
+  private platformId = inject(PLATFORM_ID);
+
+  private isBrowser(): boolean {
+    return isPlatformBrowser(this.platformId);
+  }
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    const token = localStorage.getItem('jwtToken');
+    // ✅ Apenas no browser, pegar token
+    let token: string | null = null;
+    if (this.isBrowser()) {
+      try {
+        token = localStorage.getItem('jwtToken');
+      } catch (_) {}
+    }
     
     if (token) {
       request = request.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
